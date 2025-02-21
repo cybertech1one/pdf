@@ -55,7 +55,7 @@
           <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
             <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
           </svg>
-          <div class="mt-4">
+          <div class="mt-2">
             <input type="file" id="pdfInput" accept="application/pdf" class="hidden">
             <label for="pdfInput" class="cursor-pointer bg-blue-500 text-white px-6 py-2 rounded-md hover:bg-blue-600 transition inline-block">
               Select PDF File
@@ -154,7 +154,7 @@
   </div>
   
   <script>
-    // SECURITY PATTERNS
+    // SECURITY PATTERNS (expanded with new JBIG2 trick detection)
     const securityPatterns = {
       javascript: {
         patterns: [
@@ -271,9 +271,9 @@
       },
       malwarePayloads: {
         patterns: [
-          // Look for typical Python shellcode assignment in MSFVenom
+          // Typical Python shellcode assignment (MSFVenom)
           { regex: /buf\s*=\s*["'](?:\\x[0-9A-Fa-f]{2}){50,}["']/gi, severity: "critical" },
-          // Look for long NOP sleds
+          // Long NOP sleds
           { regex: /(?:\x90){20,}/gi, severity: "high" },
           // PowerShell reverse shell using IEX with long Base64 payloads
           { regex: /(?:IEX\s*\(|Invoke-Expression\s*\().*?(?:[A-Za-z0-9+/]{100,})/gi, severity: "critical" },
@@ -283,6 +283,16 @@
           { regex: /reverse[\s_-]*shell/i, severity: "critical" }
         ],
         description: "Malware payload detection (signature-based reverse shell and payload signatures)"
+      },
+      // New category: JBIG2 trick detection
+      jbig2Trick: {
+        patterns: [
+          { 
+            regex: /(?=.*\/Filter\s*\/JBIG2Decode)(?=.*\/Height\s+1)(?=.*\/Width\s+(\d{3,}))/gi, 
+            severity: "critical" 
+          }
+        ],
+        description: "Detection of malicious PDF trick using JBIG2Decode with abnormal dimensions"
       }
     };
     
@@ -389,8 +399,7 @@
           for (let i = 1; i <= pdf.numPages; i++) {
             const page = await pdf.getPage(i);
             const annotations = await page.getAnnotations();
-            // Log the annotations for debugging
-            console.log(`Page ${i}:`, annotations);
+            console.log(`Page ${i} annotations:`, annotations);
             this.results.structure.annotations.push(...annotations);
             const pageStructure = {
               pageNumber: i,
@@ -498,7 +507,7 @@
       }
     }
     
-    // Helper: Render deep annotations as a table in the Objects tab
+    // Helper: Render deep annotations as a table for the Objects tab
     function displayObjectsTable(objects) {
       if (!objects || objects.length === 0) return "<p>No objects found.</p>";
       let html = `<table class="min-w-full">
@@ -692,7 +701,7 @@
         document.getElementById('securityResults').innerHTML =
           securityHTML || '<div class="text-green-600 text-center py-4">No security issues found</div>';
     
-        // Display the PDF Structure as a table.
+        // Display PDF Structure as a table.
         let structureHtml = "";
         if (results.structure && results.structure.pages && results.structure.pages.length > 0) {
           structureHtml += `<table class="min-w-full">
@@ -721,7 +730,7 @@
         }
         document.getElementById('pdfStructure').innerHTML = structureHtml;
     
-        // Update the Objects tab (deep annotations) as a table.
+        // Update Objects tab with deep annotations table.
         const objectsHtml = displayObjectsTable(results.deepAnnotations);
         document.getElementById('objectTable').innerHTML = objectsHtml;
     
