@@ -1,0 +1,3714 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Advanced PDF Security Scanner Pro</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              200: '#bae6fd',
+              300: '#7dd3fc',
+              400: '#38bdf8',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+              800: '#075985',
+              900: '#0c4a6e',
+              950: '#082f49',
+            },
+          },
+          animation: {
+            'spin-slow': 'spin 3s linear infinite',
+            'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- PDF.js -->
+  <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+  
+  <!-- Other Dependencies -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.9/purify.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.2.0/crypto-js.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  
+  <style>
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #0ea5e9;
+      border-radius: 10px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #0284c7;
+    }
+    
+    /* Core Styles */
+    .dropzone { 
+      border: 2px dashed #ccc; 
+      transition: all 0.3s ease; 
+    }
+    .dropzone.dragover { 
+      border-color: #0ea5e9; 
+      background: rgba(14, 165, 233, 0.1); 
+    }
+    .loading { 
+      border: 3px solid #f3f3f3; 
+      border-top: 3px solid #0ea5e9; 
+      border-radius: 50%; 
+      width: 24px; 
+      height: 24px; 
+      animation: spin 1s linear infinite; 
+      display: inline-block; 
+      margin-left: 10px; 
+      vertical-align: middle; 
+    }
+    @keyframes spin { 
+      0% { transform: rotate(0deg); } 
+      100% { transform: rotate(360deg); } 
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .fade-in {
+      animation: fadeIn 0.5s ease-in-out;
+    }
+    .tree-view { 
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; 
+    }
+    .threat-gauge { 
+      position: relative;
+      height: 120px;
+      width: 120px;
+      margin: 0 auto;
+    }
+    .gauge-border {
+      stroke-width: 10;
+      fill: none;
+    }
+    .gauge-value {
+      transition: stroke-dashoffset 1s ease;
+    }
+    .gauge-text {
+      font-weight: bold;
+      fill: #1a1a1a;
+    }
+    .pattern-match {
+      background-color: #fff8e1;
+      padding: 2px;
+      border-radius: 2px;
+      border-bottom: 1px solid #ffecb3;
+    }
+    .severity-critical {
+      @apply bg-red-100 border-l-4 border-red-500 text-red-900;
+    }
+    .severity-high {
+      @apply bg-orange-100 border-l-4 border-orange-500 text-orange-900;
+    }
+    .severity-medium {
+      @apply bg-yellow-100 border-l-4 border-yellow-500 text-yellow-900;
+    }
+    .severity-low {
+      @apply bg-blue-100 border-l-4 border-blue-500 text-blue-900;
+    }
+    .severity-info {
+      @apply bg-gray-100 border-l-4 border-gray-500 text-gray-900;
+    }
+    
+    /* Tooltip */
+    .tooltip {
+      position: relative;
+      display: inline-block;
+    }
+    .tooltip .tooltip-text {
+      visibility: hidden;
+      width: 200px;
+      background-color: #333;
+      color: #fff;
+      text-align: center;
+      border-radius: 6px;
+      padding: 5px;
+      position: absolute;
+      z-index: 1;
+      bottom: 125%;
+      left: 50%;
+      margin-left: -100px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+    .tooltip:hover .tooltip-text {
+      visibility: visible;
+      opacity: 1;
+    }
+    
+    /* Responsive Tables */
+    .responsive-table {
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .responsive-table table {
+      min-width: 100%;
+      border-collapse: collapse;
+    }
+    .responsive-table th, 
+    .responsive-table td {
+      padding: 0.75rem;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .responsive-table th {
+      background-color: #f8fafc;
+      font-weight: 600;
+      color: #475569;
+    }
+    
+    /* Tab Navigation */
+    .tab-button {
+      position: relative;
+      transition: all 0.3s ease;
+    }
+    .tab-button::after {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 0;
+      height: 2px;
+      background-color: #0ea5e9;
+      transition: width 0.3s ease;
+    }
+    .tab-button.active::after {
+      width: 100%;
+    }
+    
+    /* PDF Preview Area */
+    #pdfPreviewArea {
+      max-height: 600px;
+      overflow-y: auto;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.375rem;
+    }
+    #pdfPreviewArea canvas {
+      display: block;
+      margin: 0 auto;
+      max-width: 100%;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    
+    /* Animated Indicators */
+    .pulse-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+      margin-right: 5px;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(0.95); opacity: 0.7; }
+      50% { transform: scale(1.1); opacity: 1; }
+      100% { transform: scale(0.95); opacity: 0.7; }
+    }
+    
+    /* Card Transitions */
+    .insight-card {
+      transition: all 0.3s ease;
+    }
+    .insight-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div class="container mx-auto px-4 py-8 max-w-7xl">
+    <header class="mb-8">
+      <div class="bg-white rounded-xl shadow-md p-6 flex flex-col md:flex-row justify-between items-center">
+        <div>
+          <h1 class="text-3xl font-bold text-gray-900 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 mr-3 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+            </svg>
+            Advanced PDF Security Scanner Pro
+          </h1>
+          <p class="text-gray-600 mt-1">Deep Analysis &amp; Threat Detection for PDF Documents</p>
+        </div>
+        <div class="mt-4 md:mt-0">
+          <span class="bg-primary-100 text-primary-800 text-xs font-medium px-2.5 py-0.5 rounded-full">Version 2.5</span>
+          <span class="bg-green-100 text-green-800 text-xs font-medium ml-2 px-2.5 py-0.5 rounded-full">Enterprise Edition</span>
+        </div>
+      </div>
+    </header>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-8">
+      <!-- Left Sidebar - File Input & Controls -->
+      <div class="lg:col-span-2">
+        <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+          <h2 class="text-xl font-semibold mb-4 text-gray-800 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+            </svg>
+            Upload PDF File
+          </h2>
+          
+          <div class="dropzone rounded-lg p-8 text-center cursor-pointer transition" id="dropZone">
+            <div class="mb-4">
+              <svg class="mx-auto h-16 w-16 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48">
+                <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+              <div class="mt-4">
+                <input type="file" id="pdfInput" accept="application/pdf" class="hidden">
+                <label for="pdfInput" class="cursor-pointer bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 transition-colors inline-block font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500">
+                  Select PDF File
+                </label>
+                <p class="mt-3 text-sm text-gray-500">or drag &amp; drop PDF here</p>
+              </div>
+            </div>
+            <div id="fileDetails" class="mt-4 hidden text-sm text-gray-600">
+              <div class="bg-gray-50 p-3 rounded-lg">
+                <p id="fileName" class="font-medium"></p>
+                <p id="fileSize" class="text-xs"></p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mt-6 grid grid-cols-1 gap-4">
+            <button id="scanButton" class="w-full bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 transition-colors flex items-center justify-center font-medium disabled:opacity-50 disabled:cursor-not-allowed">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+              </svg>
+              Start Deep Scan
+              <span id="spinner" class="loading hidden"></span>
+            </button>
+            
+            <div class="grid grid-cols-2 gap-3">
+              <button id="downloadReport" class="w-full bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors hidden flex items-center justify-center font-medium">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Save Report
+              </button>
+              
+              <button id="downloadPdfReport" class="w-full bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition-colors hidden flex items-center justify-center font-medium">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+                PDF Report
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Scan Options -->
+        <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+          <h2 class="text-xl font-semibold mb-4 text-gray-800 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            Scan Options
+          </h2>
+          
+          <div class="space-y-4">
+            <div class="flex items-center">
+              <input id="deepAnalysis" type="checkbox" class="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500" checked>
+              <label for="deepAnalysis" class="ml-2 text-sm font-medium text-gray-700">Enable Deep Analysis</label>
+              <div class="tooltip ml-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span class="tooltip-text text-xs">Performs in-depth analysis of PDF structure and content</span>
+              </div>
+            </div>
+            
+            <div class="flex items-center">
+              <input id="extractText" type="checkbox" class="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500" checked>
+              <label for="extractText" class="ml-2 text-sm font-medium text-gray-700">Extract Text Content</label>
+            </div>
+            
+            <div class="flex items-center">
+              <input id="checkEmbedded" type="checkbox" class="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500" checked>
+              <label for="checkEmbedded" class="ml-2 text-sm font-medium text-gray-700">Scan Embedded Files</label>
+            </div>
+            
+            <div class="flex items-center">
+              <input id="analyzeStructure" type="checkbox" class="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500" checked>
+              <label for="analyzeStructure" class="ml-2 text-sm font-medium text-gray-700">Analyze PDF Structure</label>
+            </div>
+            
+            <div class="flex items-center">
+              <input id="renderPreview" type="checkbox" class="w-4 h-4 text-primary-600 bg-gray-100 border-gray-300 rounded focus:ring-primary-500" checked>
+              <label for="renderPreview" class="ml-2 text-sm font-medium text-gray-700">Render Page Preview</label>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Help & Information -->
+        <div class="bg-white rounded-xl shadow-md p-6">
+          <h2 class="text-xl font-semibold mb-4 text-gray-800 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            Help & Information
+          </h2>
+          
+          <div class="space-y-2 text-sm text-gray-600">
+            <p><span class="font-semibold">🔍 What does this tool do?</span> Analyzes PDF files for security threats including malicious JavaScript, hidden actions, and embedded malware.</p>
+            <p><span class="font-semibold">⚠️ Warning:</span> Results are for informational purposes. Always verify findings manually before taking action.</p>
+            <p><span class="font-semibold">🔒 Privacy:</span> All analysis is performed locally in your browser. No files are uploaded to any server.</p>
+          </div>
+          
+          <div class="mt-4 grid grid-cols-2 gap-2">
+            <button id="aboutButton" class="text-primary-600 hover:text-primary-800 text-sm font-medium flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              About
+            </button>
+            <button id="helpButton" class="text-primary-600 hover:text-primary-800 text-sm font-medium flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Help
+            </button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Right Content - Analysis Results -->
+      <div class="lg:col-span-3">
+        <!-- Progress Area -->
+        <div id="progressContainer" class="bg-white rounded-xl shadow-md p-6 mb-6 hidden">
+          <h2 class="text-xl font-semibold mb-4 text-gray-800 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-primary-600 animate-spin" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Analysis in Progress
+          </h2>
+          
+          <div class="space-y-4">
+            <div class="flex justify-between mb-1">
+              <span id="progressText" class="text-sm font-medium text-gray-700">Initializing...</span>
+              <span id="progressPercent" class="text-sm font-medium text-gray-700">0%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+              <div id="progressBar" class="bg-primary-600 h-2.5 rounded-full transition-all duration-300" style="width: 0%"></div>
+            </div>
+            <div id="progressDetails" class="text-sm text-gray-500 italic"></div>
+            
+            <div class="grid grid-cols-4 gap-4 mt-4 text-xs text-gray-600">
+              <div class="flex flex-col items-center p-2 border border-gray-200 rounded-lg bg-gray-50">
+                <span class="font-medium">File Loading</span>
+                <span id="step1Status" class="mt-1 text-primary-600">Waiting...</span>
+              </div>
+              <div class="flex flex-col items-center p-2 border border-gray-200 rounded-lg bg-gray-50">
+                <span class="font-medium">Extraction</span>
+                <span id="step2Status" class="mt-1 text-primary-600">Waiting...</span>
+              </div>
+              <div class="flex flex-col items-center p-2 border border-gray-200 rounded-lg bg-gray-50">
+                <span class="font-medium">Analysis</span>
+                <span id="step3Status" class="mt-1 text-primary-600">Waiting...</span>
+              </div>
+              <div class="flex flex-col items-center p-2 border border-gray-200 rounded-lg bg-gray-50">
+                <span class="font-medium">Reporting</span>
+                <span id="step4Status" class="mt-1 text-primary-600">Waiting...</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Results Dashboard -->
+        <div id="resultsDashboard" class="hidden">
+          <!-- Overview Cards -->
+          <div class="bg-white rounded-xl shadow-md p-6 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <!-- Threat Score -->
+              <div class="bg-gray-50 rounded-lg p-4 text-center">
+                <h3 class="text-lg font-semibold mb-3 text-gray-700">Threat Score</h3>
+                <div class="threat-gauge">
+                  <svg viewBox="0 0 120 120">
+                    <circle class="gauge-border" cx="60" cy="60" r="50" stroke="#e5e7eb"/>
+                    <circle id="gaugeValue" class="gauge-value" cx="60" cy="60" r="50" stroke="#ef4444" stroke-dasharray="314" stroke-dashoffset="0"/>
+                    <text id="gaugeText" class="gauge-text" x="60" y="65" text-anchor="middle" font-size="20">0</text>
+                  </svg>
+                </div>
+                <div id="threatLevel" class="mt-2 text-sm font-medium text-gray-800"></div>
+              </div>
+              
+              <!-- Risk Categories -->
+              <div class="bg-gray-50 rounded-lg p-4">
+                <h3 class="text-lg font-semibold mb-3 text-gray-700">Risk Categories</h3>
+                <canvas id="riskChart" height="150"></canvas>
+              </div>
+              
+              <!-- Quick Stats -->
+              <div class="bg-gray-50 rounded-lg p-4">
+                <h3 class="text-lg font-semibold mb-3 text-gray-700">Quick Stats</h3>
+                <div id="quickStats" class="text-sm space-y-2"></div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Critical Findings Alert -->
+          <div id="criticalAlert" class="bg-red-50 border-l-4 border-red-500 p-4 mb-6 rounded-lg hidden">
+            <div class="flex items-start">
+              <div class="flex-shrink-0">
+                <svg class="h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                </svg>
+              </div>
+              <div class="ml-3">
+                <h3 class="text-sm font-medium text-red-800">Critical security issues detected!</h3>
+                <div class="mt-2 text-sm text-red-700">
+                  <p id="criticalAlertMessage">This PDF contains potentially dangerous elements that could compromise system security.</p>
+                </div>
+                <div class="mt-2">
+                  <button id="showCriticalDetails" class="text-sm font-medium text-red-800 hover:text-red-900 underline">
+                    View Details
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Key Insights -->
+          <div id="keyInsights" class="bg-white rounded-xl shadow-md p-6 mb-6 hidden">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800 flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2 text-primary-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+              Key Insights
+            </h2>
+            
+            <div id="insightsContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Will be populated dynamically -->
+            </div>
+          </div>
+          
+          <!-- Tabs Navigation -->
+          <div class="bg-white rounded-xl shadow-md overflow-hidden">
+            <div class="border-b border-gray-200">
+              <nav class="flex -mb-px">
+                <button class="tab-button active text-primary-600 border-primary-500 whitespace-nowrap py-4 px-4 border-b-2 font-medium text-sm flex-1 text-center" data-tab="security">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                  </svg>
+                  Security Analysis
+                </button>
+                <button class="tab-button text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-4 border-b-2 border-transparent font-medium text-sm flex-1 text-center" data-tab="structure">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+                  </svg>
+                  PDF Structure
+                </button>
+                <button class="tab-button text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-4 border-b-2 border-transparent font-medium text-sm flex-1 text-center" data-tab="objects">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21a4 4 0 01-4-4V5a2 2 0 012-2h4a2 2 0 012 2v12a4 4 0 01-4 4zm0 0h12a2 2 0 002-2v-4a2 2 0 00-2-2h-2.343M11 7.343l1.657-1.657a2 2 0 012.828 0l2.829 2.829a2 2 0 010 2.828l-8.486 8.485M7 17h.01" />
+                  </svg>
+                  Objects
+                </button>
+                <button class="tab-button text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-4 border-b-2 border-transparent font-medium text-sm flex-1 text-center" data-tab="metadata">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                  </svg>
+                  Metadata
+                </button>
+                <button class="tab-button text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-4 px-4 border-b-2 border-transparent font-medium text-sm flex-1 text-center" data-tab="preview">
+                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1 inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                  </svg>
+                  Preview
+                </button>
+              </nav>
+            </div>
+            
+            <!-- Tab Content -->
+            <div class="p-6">
+              <!-- Security Analysis Tab -->
+              <div id="securityTab" class="tab-content">
+                <div id="securityFilters" class="mb-6 flex flex-wrap gap-2">
+                  <button class="severity-filter active px-3 py-1 rounded-full text-xs font-medium bg-gray-200 text-gray-800" data-severity="all">All Issues</button>
+                  <button class="severity-filter px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800" data-severity="critical">Critical</button>
+                  <button class="severity-filter px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800" data-severity="high">High</button>
+                  <button class="severity-filter px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800" data-severity="medium">Medium</button>
+                  <button class="severity-filter px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800" data-severity="low">Low</button>
+                </div>
+                <div id="securityResults" class="space-y-6"></div>
+              </div>
+              
+              <!-- PDF Structure Tab -->
+              <div id="structureTab" class="tab-content hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h3 class="text-lg font-semibold mb-4 text-gray-700">Pages Overview</h3>
+                    <div id="pdfStructure" class="responsive-table"></div>
+                  </div>
+                  <div>
+                    <h3 class="text-lg font-semibold mb-4 text-gray-700">Structure Tree</h3>
+                    <div id="structureTree" class="bg-gray-50 p-4 rounded-lg overflow-auto max-h-96 text-sm font-mono"></div>
+                  </div>
+                </div>
+                
+                <div class="mt-6">
+                  <h3 class="text-lg font-semibold mb-4 text-gray-700">Document Actions</h3>
+                  <div id="documentActions" class="responsive-table"></div>
+                </div>
+              </div>
+              
+              <!-- Objects Tab -->
+              <div id="objectsTab" class="tab-content hidden">
+                <div class="mb-4 flex justify-between items-center">
+                  <h3 class="text-lg font-semibold text-gray-700">PDF Objects</h3>
+                  <div class="flex space-x-2">
+                    <select id="objectTypeFilter" class="text-sm rounded-lg border-gray-300 focus:ring-primary-500 focus:border-primary-500">
+                      <option value="all">All Object Types</option>
+                      <option value="annotation">Annotations</option>
+                      <option value="action">Actions</option>
+                      <option value="javascript">JavaScript</option>
+                      <option value="form">Form Fields</option>
+                    </select>
+                    <input type="text" id="objectSearch" placeholder="Search objects..." class="text-sm rounded-lg border-gray-300 focus:ring-primary-500 focus:border-primary-500">
+                  </div>
+                </div>
+                <div id="objectTable" class="responsive-table"></div>
+              </div>
+              
+              <!-- Metadata Tab -->
+              <div id="metadataTab" class="tab-content hidden">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h3 class="text-lg font-semibold mb-4 text-gray-700">Document Information</h3>
+                    <div id="metadataInfo" class="bg-gray-50 p-4 rounded-lg"></div>
+                  </div>
+                  <div>
+                    <h3 class="text-lg font-semibold mb-4 text-gray-700">XMP Metadata</h3>
+                    <div id="xmpMetadata" class="bg-gray-50 p-4 rounded-lg overflow-auto max-h-96"></div>
+                  </div>
+                </div>
+                
+                <div class="mt-6">
+                  <h3 class="text-lg font-semibold mb-4 text-gray-700">Raw Metadata</h3>
+                  <div id="rawMetadata" class="font-mono text-xs bg-gray-50 p-4 rounded-lg overflow-auto max-h-96"></div>
+                </div>
+              </div>
+              
+              <!-- Preview Tab -->
+              <div id="previewTab" class="tab-content hidden">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div>
+                    <h3 class="text-lg font-semibold mb-4 text-gray-700">Page Preview</h3>
+                    <div class="flex items-center justify-between mb-4">
+                      <div class="flex items-center">
+                        <button id="prevPage" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-l">
+                          &lt;
+                        </button>
+                        <span id="pageInfo" class="px-4 py-2 bg-gray-100">Page 1 of 1</span>
+                        <button id="nextPage" class="bg-gray-200 hover:bg-gray-300 text-gray-800 font-bold py-2 px-4 rounded-r">
+                          &gt;
+                        </button>
+                      </div>
+                      <select id="zoomLevel" class="ml-2 rounded-md border-gray-300 text-sm">
+                        <option value="0.5">50%</option>
+                        <option value="0.75">75%</option>
+                        <option value="1" selected>100%</option>
+                        <option value="1.25">125%</option>
+                        <option value="1.5">150%</option>
+                        <option value="2">200%</option>
+                      </select>
+                    </div>
+                    <div id="pdfPreviewArea" class="border border-gray-200 rounded-lg"></div>
+                  </div>
+                  <div>
+                    <h3 class="text-lg font-semibold mb-4 text-gray-700">Extracted Text</h3>
+                    <textarea id="pdfText" readonly class="w-full h-[500px] p-4 font-mono text-sm border border-gray-300 rounded-lg resize-none"></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Modal for About -->
+  <div id="aboutModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div class="p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-2xl font-bold text-gray-900">About Advanced PDF Security Scanner</h2>
+          <button id="closeAboutModal" class="text-gray-400 hover:text-gray-500">
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="prose max-w-none">
+          <p>Advanced PDF Security Scanner Pro is a state-of-the-art tool designed to identify security threats and vulnerabilities in PDF documents.</p>
+          <p>The tool performs comprehensive analysis of PDF structure, content, and embedded objects to detect potential threats such as:</p>
+          <ul>
+            <li>Malicious JavaScript code</li>
+            <li>Hidden actions and automatic triggers</li>
+            <li>Suspicious network activity</li>
+            <li>Embedded malware or exploits</li>
+            <li>Data exfiltration attempts</li>
+            <li>And many other security vulnerabilities</li>
+          </ul>
+          <p><strong>Technology:</strong> This tool runs entirely in your browser using PDF.js, JavaScript, and modern web technologies. No data is sent to any server.</p>
+          <p><strong>Version:</strong> 2.5.0 (February 2025)</p>
+          <p><strong>License:</strong> Enterprise Edition</p>
+        </div>
+      </div>
+      <div class="bg-gray-50 px-6 py-4 flex justify-end">
+        <button id="closeAboutModalBtn" class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">Close</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Modal for Help -->
+  <div id="helpModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div class="p-6">
+        <div class="flex justify-between items-center mb-4">
+          <h2 class="text-2xl font-bold text-gray-900">Help & User Guide</h2>
+          <button id="closeHelpModal" class="text-gray-400 hover:text-gray-500">
+            <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+        <div class="prose max-w-none">
+          <h3>Getting Started</h3>
+          <ol>
+            <li>Upload a PDF file by clicking "Select PDF File" or dragging a file to the upload area.</li>
+            <li>Click "Start Deep Scan" to begin the analysis process.</li>
+            <li>Review the results in the various tabs to understand potential security issues.</li>
+          </ol>
+          
+          <h3>Understanding the Results</h3>
+          <p>The scanner categorizes findings by severity level:</p>
+          <ul>
+            <li><strong class="text-red-600">Critical:</strong> Serious security issues that require immediate attention.</li>
+            <li><strong class="text-orange-600">High:</strong> Significant concerns that should be addressed promptly.</li>
+            <li><strong class="text-yellow-600">Medium:</strong> Potential issues that merit investigation.</li>
+            <li><strong class="text-blue-600">Low:</strong> Minor concerns with limited security impact.</li>
+          </ul>
+          
+          <h3>Tab Descriptions</h3>
+          <ul>
+            <li><strong>Security Analysis:</strong> Detailed findings of security issues found in the PDF.</li>
+            <li><strong>PDF Structure:</strong> Analysis of the document's organization and components.</li>
+            <li><strong>Objects:</strong> Details about annotations, form fields, and other PDF objects.</li>
+            <li><strong>Metadata:</strong> Document information and embedded metadata.</li>
+            <li><strong>Preview:</strong> Visual preview of PDF pages and extracted text content.</li>
+          </ul>
+          
+          <h3>Export Options</h3>
+          <p>Use the "Save Report" or "PDF Report" buttons to export findings for documentation or further analysis.</p>
+        </div>
+      </div>
+      <div class="bg-gray-50 px-6 py-4 flex justify-end">
+        <button id="closeHelpModalBtn" class="px-4 py-2 bg-primary-600 text-white rounded-md hover:bg-primary-700">Close</button>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    // Initialize PDF.js worker
+    window.onload = function() {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    };
+    
+    /**
+     * ENHANCED SECURITY PATTERNS - Comprehensive threat detection
+     */
+    const securityPatterns = {
+      javascript: {
+        patterns: [
+          { regex: /\/JavaScript|\/JS\s*\(/gi, severity: "critical", description: "JavaScript action detected in PDF" },
+          { regex: /eval\(|new\s+Function|setTimeout|setInterval/gi, severity: "critical", description: "Dynamic code execution" },
+          { regex: /Function\(['"`]return.*?['"`]\)/gi, severity: "critical", description: "Suspicious function construction" },
+          { regex: /document\.|window\.|global\.|process\.|require\(|import\s+|module\./gi, severity: "high", description: "DOM or Node.js manipulation" },
+          { regex: /this\.exportDataObject\s*\(|this\.mailDoc\s*\(|this\.submitForm\s*\(|this\.print\s*\(/gi, severity: "high", description: "PDF API method calls" },
+          { regex: /app\.launchURL\s*\(|app\.execMenuItem\s*\(|app\.alert\s*\(/gi, severity: "high", description: "Acrobat app API usage" },
+          { regex: /\.getAnnots|\.getField|\.getIcon|\.getLinks/gi, severity: "high", description: "PDF object access methods" },
+          { regex: /\\x[0-9A-Fa-f]{2}|\\u[0-9A-Fa-f]{4}|%u[0-9A-Fa-f]{4}/gi, severity: "medium", description: "Encoded characters" },
+          { regex: /unescape\s*\(|String\.fromCharCode\s*\(/gi, severity: "medium", description: "Character decoding functions" },
+          { regex: /(\w+)\s*=\s*['"`]([^'"`]{100,})['"`]/gi, severity: "medium", description: "Large string assignment" },
+          { regex: /(\w+)\[['"`](\w+)['"`]\]\s*\(/gi, severity: "medium", description: "Dynamic property method call" },
+          { regex: /\btry\s*\{[\s\S]*?\}\s*catch/gi, severity: "low", description: "Error handling around suspicious code" },
+          { regex: /\bwith\s*\([^)]+\)/gi, severity: "medium", description: "With statement (deprecated)" },
+          { regex: /\bWebSocket\b|\bFetch\b|\bXMLHttpRequest\b/gi, severity: "high", description: "Network communication APIs" },
+          { regex: /\baddEventListener\(|\battachEvent\(/gi, severity: "medium", description: "Event listener registration" },
+          { regex: /\bworker\b|\bServiceWorker\b/gi, severity: "high", description: "Web Worker APIs" },
+          { regex: /\bconsole\.\w+\(/gi, severity: "low", description: "Console logging" },
+          { regex: /\blocalStorage\b|\bsessionStorage\b|\bindexedDB\b/gi, severity: "medium", description: "Browser storage access" },
+          { regex: /\bnavigator\.[^\s(]+/gi, severity: "medium", description: "Navigator object access" },
+          { regex: /\blocation\.[^\s(]+|\blocation\s*=/gi, severity: "high", description: "Location object manipulation" }
+        ],
+        description: "Detection of embedded or injected JavaScript code, including obfuscated scripts and potentially dangerous APIs."
+      },
+      networkActivity: {
+        patterns: [
+          { regex: /(https?|ftp|file|data|blob):\/\/[^\s<>"']+/gi, severity: "medium", description: "URL reference" },
+          { regex: /\/URI\s*\(|\/URL\s*\(|\/Launch\s*\(|\/SubmitForm/gi, severity: "high", description: "URI action in PDF" },
+          { regex: /\/GoTo(?:E|R)?|\/Launch|\/Thread|\/Sound/gi, severity: "medium", description: "Navigation action" },
+          { regex: /file:\/\/[^\s<>"']+/gi, severity: "medium", description: "Local file reference" },
+          { regex: /\/S\s*\/URI/gi, severity: "medium", description: "URI link annotation" },
+          { regex: /POST|GET|PUT|DELETE|PATCH|HEAD|OPTIONS/gi, severity: "high", description: "HTTP method reference" },
+          { regex: /var\s+xhr\s*=\s*new\s+XMLHttpRequest/gi, severity: "high", description: "XHR initialization" },
+          { regex: /fetch\s*\(\s*['"`][^'"`]+['"`]/gi, severity: "high", description: "Fetch API usage" },
+          { regex: /WebSocket\s*\(\s*['"`][^'"`]+['"`]/gi, severity: "high", description: "WebSocket initialization" },
+          { regex: /http[s]?:\/\/(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+/gi, severity: "medium", description: "HTTP URL" },
+          { regex: /\/F\s*\(\s*(https?|ftp|file):\/\/[^\s<>"']+\s*\)/gi, severity: "high", description: "Remote file reference" },
+          { regex: /\.php\?|\.aspx\?|\.jsp\?|\.do\?/gi, severity: "medium", description: "Dynamic webpage with parameters" },
+          { regex: /content-type|content-length|authorization|x-requested-with/gi, severity: "medium", description: "HTTP header reference" },
+          { regex: /application\/json|application\/x-www-form-urlencoded|multipart\/form-data/gi, severity: "low", description: "HTTP content type" },
+          { regex: /\/\/[^/]+\.onion\//gi, severity: "high", description: "Tor hidden service reference" }
+        ],
+        description: "Detection of network calls, URL references, file URIs, and potential exfiltration channels."
+      },
+      pdfStructure: {
+        patterns: [
+          { regex: /\/OpenAction|\/AA|\/Launch|\/JavaScript|\/RichMedia/gi, severity: "critical", description: "Automatic action trigger" },
+          { regex: /\/XFA|\/AcroForm|\/JBIG2Decode|\/CCITTFaxDecode/gi, severity: "high", description: "Complex PDF feature" },
+          { regex: /\/ObjStm|\/XRef|\/EmbeddedFile|\/FileSpec/gi, severity: "medium", description: "Advanced structure element" },
+          { regex: /\/Pages\/Kids\[\s*[0-9]+\s+[0-9]+\s+R/gi, severity: "low", description: "Document page structure" },
+          { regex: /\/Type\s*\/Action/gi, severity: "high", description: "Action object" },
+          { regex: /\/Type\s*\/Annot/gi, severity: "medium", description: "Annotation object" },
+          { regex: /\/S\s*\/GoTo/gi, severity: "low", description: "Go-to action" },
+          { regex: /\/S\s*\/JavaScript/gi, severity: "critical", description: "JavaScript action" },
+          { regex: /\/S\s*\/Launch/gi, severity: "critical", description: "Launch action" },
+          { regex: /\/S\s*\/URI/gi, severity: "medium", description: "URI action" },
+          { regex: /\/S\s*\/Named/gi, severity: "medium", description: "Named action" },
+          { regex: /\/S\s*\/SubmitForm/gi, severity: "high", description: "Form submission action" },
+          { regex: /\/S\s*\/ImportData/gi, severity: "high", description: "Data import action" },
+          { regex: /\/Linearized/gi, severity: "low", description: "Linearized PDF" },
+          { regex: /\/StructTreeRoot/gi, severity: "low", description: "Structure tree" },
+          { regex: /\/XObject\s*\/Subtype\s*\/Image/gi, severity: "low", description: "Image XObject" },
+          { regex: /\/XObject\s*\/Subtype\s*\/Form/gi, severity: "medium", description: "Form XObject" },
+          { regex: /\/Filter\s*\/ASCIIHexDecode/gi, severity: "low", description: "ASCII hex encoding" },
+          { regex: /\/Filter\s*\/ASCII85Decode/gi, severity: "low", description: "ASCII85 encoding" },
+          { regex: /\/Filter\s*\/LZWDecode/gi, severity: "low", description: "LZW compression" },
+          { regex: /\/Filter\s*\/RunLengthDecode/gi, severity: "low", description: "Run length encoding" },
+          { regex: /\/Filter\s*\/DCTDecode/gi, severity: "low", description: "DCT (JPEG) image" },
+          { regex: /\/Pages\/Count\s+([1-9][0-9]*)/gi, severity: "info", description: "Page count" },
+          { regex: /\/Version\s*\/([1-9]\.[0-9])/gi, severity: "info", description: "PDF version" },
+          { regex: /\/Encrypt/gi, severity: "medium", description: "Encrypted PDF" },
+          { regex: /\/ID\s*\[\s*<[0-9a-fA-F]+>\s*<[0-9a-fA-F]+>\s*\]/gi, severity: "low", description: "Document ID" },
+          { regex: /\/Names/gi, severity: "medium", description: "Names dictionary" },
+          { regex: /\/Dests/gi, severity: "low", description: "Destinations" },
+          { regex: /\/OCProperties/gi, severity: "low", description: "Optional content properties" },
+          { regex: /\/Outlines/gi, severity: "low", description: "Document outlines" }
+        ],
+        description: "Detection of anomalies in PDF structure, embedded objects, and potentially dangerous elements."
+      },
+      maliciousPatterns: {
+        patterns: [
+          { regex: /\b(?:cmd|shell|powershell|wscript)\b.*?\b(?:\/c|exec|run)/gi, severity: "critical", description: "Command execution" },
+          { regex: /\b(?:password|passwd|pwd|credential|token|api[_-]?key|secret)/gi, severity: "high", description: "Credential reference" },
+          { regex: /(?:\\x[0-9a-fA-F]{2}|\\u[0-9a-fA-F]{4}|%u[0-9a-fA-F]{4}){3,}/gi, severity: "high", description: "Heavily encoded content" },
+          { regex: /\bb64encode|\bb64decode|\bexec\(|base64decode|base64encode/gi, severity: "high", description: "Base64 handling" },
+          { regex: /(onerror\s*=|onload\s*=|alert\s*\(|prompt\s*\(|confirm\s*\()/gi, severity: "medium", description: "Browser dialog or event handler" },
+          { regex: /\/F\s*\([^)]+\.(exe|dll|bat|scr|vbs|ps1|sh)\)/gi, severity: "critical", description: "Executable file reference" },
+          { regex: /curl\s+-o\s+|wget\s+/gi, severity: "high", description: "File download command" },
+          { regex: /certutil\s+-decode|base64\s+-d/gi, severity: "high", description: "Binary decoding utility" },
+          { regex: /eval\((?:.|\s)*?\+.*?\)/gi, severity: "critical", description: "Dynamic code evaluation" },
+          { regex: /(rundll32|regsvr32|mshta|wmic)\s+/gi, severity: "critical", description: "Windows utility execution" },
+          { regex: /(cd\s+[\/\\]|mkdir\s+|rmdir\s+|touch\s+)/gi, severity: "medium", description: "Filesystem command" },
+          { regex: /(SELECT|INSERT|UPDATE|DELETE|CREATE|ALTER|DROP)\s+.*?FROM/gi, severity: "high", description: "SQL statement" },
+          { regex: /\$\(|`.*?`|\$\{.*?\}/gi, severity: "high", description: "Command substitution" },
+          { regex: /process.env|os.system|subprocess|child_process|Runtime.exec/gi, severity: "high", description: "Process execution API" },
+          { regex: /chmod\s+[0-7]{3,4}|sudo\s+/gi, severity: "high", description: "Unix privilege command" },
+          { regex: /net\s+user|net\s+localgroup|net\s+use/gi, severity: "high", description: "Windows user management" },
+          { regex: /taskkill|tasklist|netstat -/gi, severity: "medium", description: "System information command" },
+          { regex: /Invoke-Expression|iex\s+/gi, severity: "critical", description: "PowerShell execution" },
+          { regex: /-nop\s+-[ec]|EncodedCommand/gi, severity: "critical", description: "PowerShell encoding/obfuscation" },
+          { regex: /sc\s+create|sc\s+config|sc\s+start/gi, severity: "high", description: "Windows service manipulation" },
+          { regex: /reg\s+add|reg\s+delete|regedit/gi, severity: "high", description: "Registry manipulation" },
+          { regex: /schtasks\s+\/create/gi, severity: "high", description: "Scheduled task creation" },
+          { regex: /cmd\.exe|powershell\.exe|bash\.exe|sh\.exe/gi, severity: "high", description: "Shell executable reference" },
+          { regex: /"(?:[^"\\]|\\.){100,}"/g, severity: "medium", description: "Suspiciously long string" }
+        ],
+        description: "Detection of typical malicious commands, file references, and obfuscation patterns across multiple platforms."
+      },
+      xssAttacks: {
+        patterns: [
+          { regex: /<script[\s\S]*?>[\s\S]*?<\/script>/gi, severity: "critical", description: "Script tag" },
+          { regex: /<img[^>]+src\s*=\s*['"]javascript:/gi, severity: "high", description: "JavaScript in image source" },
+          { regex: /<iframe[\s\S]*?>[\s\S]*?<\/iframe>/gi, severity: "high", description: "Iframe element" },
+          { regex: /on\w+\s*=\s*(["']?).*?\1/gi, severity: "medium", description: "Event handler attribute" },
+          { regex: /document\.cookie|window\.location|document\.location/gi, severity: "medium", description: "DOM location/cookie access" },
+          { regex: /<(style|link)[^>]+(javascript:)/gi, severity: "high", description: "JavaScript in style" },
+          { regex: /expression\s*\(/gi, severity: "medium", description: "CSS expression" },
+          { regex: /<form[\s\S]*?>[\s\S]*?<\/form>/gi, severity: "medium", description: "Form element" },
+          { regex: /document\.write\s*\(/gi, severity: "high", description: "Document write" },
+          { regex: /eval\s*\(|setTimeout\s*\(|setInterval\s*\(/gi, severity: "high", description: "Dynamic code execution" },
+          { regex: /innerHTML|outerHTML|insertAdjacentHTML/gi, severity: "medium", description: "HTML injection point" },
+          { regex: /createTextNode|createElement|appendChild|insertBefore/gi, severity: "medium", description: "DOM manipulation" },
+          { regex: /\.src\s*=|\.href\s*=/gi, severity: "medium", description: "Source attribute assignment" },
+          { regex: /&#x?\d+;|&[a-z]+;/gi, severity: "low", description: "HTML entity encoding" },
+          { regex: /%[0-9A-Fa-f]{2}/g, severity: "low", description: "URL encoding" },
+          { regex: /encodeURIComponent|decodeURIComponent|escape|unescape/gi, severity: "low", description: "URL encoding/decoding" }
+        ],
+        description: "Detection of common XSS injection patterns, HTML manipulation, and DOM-based vulnerabilities."
+      },
+      ssrfAndBeacons: {
+        patterns: [
+          { regex: /(?<![\w])(https?:\/\/(?:127\.0\.0\.1|localhost|169\.254\.\d+\.\d+))/gi, severity: "critical", description: "Local service access" },
+          { regex: /(?<![\w])(https?:\/\/(10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2[0-9]|3[0-1])\.\d+\.\d+))/gi, severity: "critical", description: "Private network access" },
+          { regex: /https?:\/\/(exfil|callback|beacon|c2|command|collect|data|drop|dump)\.[^\s<>"']+/gi, severity: "high", description: "Suspicious domain name" },
+          { regex: /https?:\/\/[^\s]*burpcollaborator\.net[^\s]*/gi, severity: "high", description: "Burp Collaborator reference" },
+          { regex: /\/etc\/passwd|\/etc\/shadow|metadata\.google\.internal|169\.254\.169\.254/gi, severity: "high", description: "System file or metadata service" },
+          { regex: /file:\/\/\/[a-zA-Z]:/gi, severity: "high", description: "Local file access" },
+          { regex: /\/\/0177\.0\.0\.1|\/\/0x7f000001|\/\/2130706433/gi, severity: "critical", description: "Obfuscated localhost" },
+          { regex: /intranet|internal|localhost|local|private|172\.(?:1[6-9]|2\d|3[01])|192\.168|10\./gi, severity: "high", description: "Internal network reference" },
+          { regex: /amazonaws\.com\/latest\/meta-data|metadata\.google\.internal|metadata\.azure\.com/gi, severity: "high", description: "Cloud metadata service" },
+          { regex: /instance-data|api\.telegram\.org|api\.discord\.com|graph\.facebook\.com/gi, severity: "medium", description: "API service" },
+          { regex: /smtp-|mail\.|exchange\.|mta-|pop\.|pop3\.|imap\./gi, severity: "high", description: "Mail server reference" },
+          { regex: /ldap:\/\/|ldaps:\/\/|adfs\.|kerberos\.|activedirectory\./gi, severity: "high", description: "Directory service reference" },
+          { regex: /jenkins\.|gitlab\.|artifactory\.|nexus\.|sonar\.|docker\.|kubernetes\.|consul\./gi, severity: "high", description: "DevOps tool reference" },
+          { regex: /redis:\/\/|mongodb:\/\/|postgres:\/\/|mysql:\/\/|jdbc:mysql:\/\/|jdbc:postgresql:\/\//gi, severity: "critical", description: "Database connection string" }
+        ],
+        description: "Detection of potential SSRF, callbacks, beacon endpoints, and internal/cloud resource access."
+      },
+      obfuscationAndHidden: {
+        patterns: [
+          { regex: /[A-Za-z0-9+\/]{40,}={0,2}/g, severity: "medium", description: "Base64-encoded content" },
+          { regex: /[\u200B-\u200F\uFEFF\u2028\u2029]/g, severity: "medium", description: "Zero-width/invisible characters" },
+          { regex: /(script){3,}/gi, severity: "high", description: "Keyword obfuscation" },
+          { regex: /(?:['"][A-Za-z0-9]{10,}['"]\s*\+\s*){2,}/gi, severity: "medium", description: "String concatenation" },
+          { regex: /(?:%[0-9A-Fa-f]{2}){20,}/g, severity: "medium", description: "Percent-encoded content" },
+          { regex: /(?=.*\\x[0-9A-Fa-f]{2})(?=.*[A-Za-z0-9+\/]{20,}={0,2})/gi, severity: "critical", description: "Mixed encoding techniques" },
+          { regex: /\[\s*'\s*\+\s*'\s*\]/gi, severity: "high", description: "Array notation obfuscation" },
+          { regex: /(?:\\u00[0-9a-f]{2}){10,}/gi, severity: "high", description: "Unicode escape sequences" },
+          { regex: /\\(?:[\r\n]|\\r|\\n)/gi, severity: "medium", description: "Escaped linebreaks" },
+          { regex: /\\x[0-9A-Fa-f]{2}\\x[0-9A-Fa-f]{2}/gi, severity: "high", description: "Hexadecimal escape sequences" },
+          { regex: /\.replace\(/gi, severity: "medium", description: "String replacement" },
+          { regex: /\.split\(['"]\s*['"]\)\.join\(['"]\s*['"]\)/gi, severity: "medium", description: "Split/join obfuscation" },
+          { regex: /atob\s*\(/gi, severity: "high", description: "Base64 decoding" },
+          { regex: /String\.fromCharCode\(/gi, severity: "high", description: "Character code conversion" },
+          { regex: /=\s*Function\((['"])[\s\S]+?\1\)/gi, severity: "critical", description: "Dynamic function creation" },
+          { regex: /eval\s*\(\s*atob\s*\(/gi, severity: "critical", description: "Evaluated Base64 content" },
+          { regex: /\\.\s*{{}/gi, severity: "medium", description: "Template literal obfuscation" },
+          { regex: /\\.\s*\/[^\/]+\/[gimuy]*\s*(?:\.\s*(?:test|exec|match)\s*\(\s*)?/gi, severity: "medium", description: "Obfuscated RegExp" },
+          { regex: /\(\s*\[\]\s*\+\s*\[\]\s*\)\s*\[\s*\+\s*\+\s*\+\s*\!\s*\[\]\s*\+\s*\+\s*\+\s*\!\s*\!\s*\[\]\s*\]/gi, severity: "critical", description: "JSFuck obfuscation" }
+        ],
+        description: "Detection of obfuscated or hidden content (including percent-encoding, mixed encoding, and concatenated strings)."
+      },
+      reverseShell: {
+        patterns: [
+          { regex: /bash\s+-i\s*>\&\s*\/dev\/tcp\/\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\/\d+\s+0>&1/gi, severity: "critical", description: "Bash TCP reverse shell" },
+          { regex: /nc\s+-e\s+\/bin\/sh\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\s+\d+/gi, severity: "critical", description: "Netcat reverse shell" },
+          { regex: /ncat\s+-e\s+\/bin\/sh\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\s+\d+/gi, severity: "critical", description: "Ncat reverse shell" },
+          { regex: /perl\s+-e\s+'.*socket\(/gi, severity: "critical", description: "Perl reverse shell" },
+          { regex: /python\s+-c\s+'.*socket\.socket\(/gi, severity: "critical", description: "Python reverse shell" },
+          { regex: /php\s+-r\s+'.*fsockopen\(/gi, severity: "critical", description: "PHP reverse shell" },
+          { regex: /powershell\s+-nop\s+-c\s+".*New-Object\s+Net\.Sockets\.TCPClient/gi, severity: "critical", description: "PowerShell reverse shell" },
+          { regex: /cmd\.exe\s+\/c\s+start\s+\/b/gi, severity: "critical", description: "Windows command execution" },
+          { regex: /powershell\s+-EncodedCommand/gi, severity: "critical", description: "PowerShell encoded command" },
+          { regex: /IEX\s*\(\s*New-Object\s+Net\.WebClient\s*\)\.DownloadString\s*\(/gi, severity: "critical", description: "PowerShell download and execute" },
+          { regex: /ruby\s+-rsocket\s+-e/gi, severity: "critical", description: "Ruby reverse shell" },
+          { regex: /socat\s+.*?\s+TCP4:/gi, severity: "critical", description: "Socat reverse shell" },
+          { regex: /mknod\s+.*?\s+p\s+.*?\s+\/bin\/sh/gi, severity: "critical", description: "Named pipe shell" },
+          { regex: /\/bin\/bash\s+-i\s*>.*?&\s*\d+>.*?&\s*\d+/gi, severity: "critical", description: "Bash reverse shell variation" },
+          { regex: /telnet\s+\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\s+\d+\s*\|\s*\/bin\/sh/gi, severity: "critical", description: "Telnet reverse shell" },
+          { regex: /-nop\s+-w\s+hidden\s+-c\s+"/gi, severity: "critical", description: "PowerShell hidden execution" },
+          { regex: /\/dev\/tcp|\/bin\/bash\s+-i/gi, severity: "critical", description: "Bash reverse shell component" },
+          { regex: /New-Object\s+System\.Net\.Sockets\.TCPClient/gi, severity: "critical", description: "PowerShell TCP client" },
+          { regex: /MemoryStream\(.*Convert\.FromBase64String/gi, severity: "critical", description: "Memory-based code execution" }
+        ],
+        description: "Detection of reverse shell commands, backdoor patterns, and remote access techniques."
+      },
+      macroDetection: {
+        patterns: [
+          { regex: /AutoOpen\s*\(/gi, severity: "critical", description: "Auto-opening macro" },
+          { regex: /Sub\s+AutoOpen/gi, severity: "critical", description: "AutoOpen subroutine" },
+          { regex: /Document_Open\s*\(/gi, severity: "critical", description: "Document open event" },
+          { regex: /CreateObject\(["']WScript\.Shell["']\)/gi, severity: "high", description: "WScript Shell creation" },
+          { regex: /AutoExec\s*\(/gi, severity: "critical", description: "Auto-execute macro" },
+          { regex: /Workbook_Open\s*\(/gi, severity: "critical", description: "Workbook open event" },
+          { regex: /Document_Close\s*\(/gi, severity: "critical", description: "Document close event" },
+          { regex: /Shell\s*\(/gi, severity: "critical", description: "Shell command execution" },
+          { regex: /VBA\.CreateObject/gi, severity: "high", description: "VBA object creation" },
+          { regex: /ActiveDocument\.|ThisDocument\./gi, severity: "high", description: "Document object reference" },
+          { regex: /Selection\.|ActiveCell\./gi, severity: "medium", description: "Selection manipulation" },
+          { regex: /\.SaveAs\s/gi, severity: "high", description: "Document saving method" },
+          { regex: /Chr\(\s*\d+\s*\)/gi, severity: "medium", description: "Character code conversion" },
+          { regex: /\&H[0-9A-F]+/gi, severity: "medium", description: "Hexadecimal literals" },
+          { regex: /CreateObject\(\s*["']Scripting\.FileSystemObject["']\s*\)/gi, severity: "high", description: "Filesystem object creation" },
+          { regex: /\.Open\s+["'][^"']+\.exe["']|\.Open\s+["'][^"']+\.dll["']/gi, severity: "critical", description: "Opening executable files" },
+          { regex: /Application\.Run/gi, severity: "high", description: "Dynamic macro execution" },
+          { regex: /\bDim\s+(\w+)\s+As\s+Object/gi, severity: "medium", description: "Generic object declaration" },
+          { regex: /Set\s+(\w+)\s*=\s*CreateObject\(/gi, severity: "high", description: "Object instantiation" },
+          { regex: /ExecuteExcel4Macro/gi, severity: "critical", description: "Excel 4.0 macro execution" }
+        ],
+        description: "Detection of macros and VBA code execution patterns, commonly found in malicious documents."
+      },
+      htmlContent: {
+        patterns: [
+          { regex: /<html[\s\S]*?>[\s\S]*?<\/html>/gi, severity: "medium", description: "HTML document" },
+          { regex: /<iframe[\s\S]*?>[\s\S]*?<\/iframe>/gi, severity: "high", description: "Iframe element" },
+          { regex: /<form[\s\S]*?>[\s\S]*?<\/form>/gi, severity: "medium", description: "Form element" },
+          { regex: /<script[\s\S]*?>[\s\S]*?<\/script>/gi, severity: "high", description: "Script element" },
+          { regex: /<object[\s\S]*?>[\s\S]*?<\/object>/gi, severity: "high", description: "Object element" },
+          { regex: /<embed[\s\S]*?>[\s\S]*?<\/embed>/gi, severity: "high", description: "Embed element" },
+          { regex: /<applet[\s\S]*?>[\s\S]*?<\/applet>/gi, severity: "high", description: "Applet element" },
+          { regex: /<meta[\s\S]*?>/gi, severity: "low", description: "Meta tag" },
+          { regex: /<link[\s\S]*?>/gi, severity: "medium", description: "Link tag" },
+          { regex: /<style[\s\S]*?>[\s\S]*?<\/style>/gi, severity: "low", description: "Style element" },
+          { regex: /<a[\s\S]*?href\s*=\s*["']javascript:[^"']*["'][^>]*>/gi, severity: "high", description: "JavaScript link" },
+          { regex: /<img[\s\S]*?src\s*=\s*["']javascript:[^"']*["'][^>]*>/gi, severity: "high", description: "JavaScript image source" },
+          { regex: /<input[\s\S]*?>/gi, severity: "medium", description: "Input element" },
+          { regex: /<button[\s\S]*?>[\s\S]*?<\/button>/gi, severity: "medium", description: "Button element" },
+          { regex: /<svg[\s\S]*?>[\s\S]*?<\/svg>/gi, severity: "medium", description: "SVG element" },
+          { regex: /<!DOCTYPE/gi, severity: "low", description: "DOCTYPE declaration" },
+          { regex: /<table[\s\S]*?>[\s\S]*?<\/table>/gi, severity: "low", description: "Table element" },
+          { regex: /<div[\s\S]*?>[\s\S]*?<\/div>/gi, severity: "low", description: "Div element" }
+        ],
+        description: "Detection of embedded HTML content, which could contain scripts, forms, or other interactive elements."
+      },
+      trackingAnalytics: {
+        patterns: [
+          { regex: /google-analytics\.com/gi, severity: "medium", description: "Google Analytics" },
+          { regex: /analytics\.js/gi, severity: "medium", description: "Analytics script" },
+          { regex: /segment\.com/gi, severity: "medium", description: "Segment analytics" },
+          { regex: /mixpanel\.com/gi, severity: "medium", description: "Mixpanel analytics" },
+          { regex: /tracking\.php/gi, severity: "medium", description: "Tracking script" },
+          { regex: /pixel\.gif/gi, severity: "medium", description: "Tracking pixel" },
+          { regex: /doubleclick\.net/gi, severity: "medium", description: "DoubleClick tracker" },
+          { regex: /facebook\.com\/tr\?/gi, severity: "medium", description: "Facebook tracking pixel" },
+          { regex: /googletagmanager\.com/gi, severity: "medium", description: "Google Tag Manager" },
+          { regex: /linkedin\.com\/px/gi, severity: "medium", description: "LinkedIn tracking" },
+          { regex: /hotjar\.com/gi, severity: "medium", description: "Hotjar analytics" },
+          { regex: /clarity\.ms/gi, severity: "medium", description: "Microsoft Clarity" },
+          { regex: /beacon\.js/gi, severity: "medium", description: "Analytics beacon" },
+          { regex: /\/collect\?/gi, severity: "medium", description: "Data collection endpoint" },
+          { regex: /fingerprint|canvas\+fingerprint/gi, severity: "high", description: "Browser fingerprinting" },
+          { regex: /user-agent|navigator\.userAgent/gi, severity: "medium", description: "User agent detection" }
+        ],
+        description: "Detection of tracking and analytics scripts, which could be used to monitor user activity."
+      },
+      malwarePayloads: {
+        patterns: [
+          { regex: /buf\s*=\s*["'](?:\\x[0-9A-Fa-f]{2}){50,}["']/gi, severity: "critical", description: "Shellcode buffer" },
+          { regex: /(?:\x90){20,}/gi, severity: "high", description: "NOP sled" },
+          { regex: /(?:IEX\s*\(|Invoke-Expression\s*\().*?(?:[A-Za-z0-9+/]{100,})/gi, severity: "critical", description: "PowerShell encoded payload" },
+          { regex: /<\?php\s+.*?(?:fsockopen|exec|system|passthru|popen)\(/gi, severity: "critical", description: "PHP shell commands" },
+          { regex: /reverse[\s_-]*shell/i, severity: "critical", description: "Reverse shell reference" },
+          { regex: /\/F\s*\([^)]+\.(exe|dll|bat|scr)\)/gi, severity: "critical", description: "Executable file reference" },
+          { regex: /(?:[0-9A-Fa-f]{2}\s+){100,}/g, severity: "high", description: "Hex byte sequence" },
+          { regex: /eval\((?:.|\s)*?\+.*?\)/gi, severity: "critical", description: "Evaluated concatenated code" },
+          { regex: /CreateProcess\s*\(/gi, severity: "critical", description: "Process creation API" },
+          { regex: /VirtualAllocEx\s*\(/gi, severity: "critical", description: "Memory allocation API" },
+          { regex: /WriteProcessMemory\s*\(/gi, severity: "critical", description: "Memory writing API" },
+          { regex: /CreateRemoteThread\s*\(/gi, severity: "critical", description: "Remote thread creation" },
+          { regex: /MZ[\x00-\xFF]{64,}/gi, severity: "critical", description: "Embedded PE file" },
+          { regex: /kernel32\.dll|ntdll\.dll|advapi32\.dll|user32\.dll/gi, severity: "high", description: "Windows system DLL reference" },
+          { regex: /LoadLibrary|GetProcAddress|CreateThread|VirtualProtect/gi, severity: "high", description: "Windows API function" },
+          { regex: /meterpreter|metasploit|payload|cobaltstrike|beacon/gi, severity: "critical", description: "Known malware framework" },
+          { regex: /botnet|command\s*&\s*control|c2\s*server/gi, severity: "critical", description: "Botnet reference" },
+          { regex: /(?:\/dev\/random|\/dev\/urandom|RtlGenRandom|CryptGenRandom|rand|srand)/gi, severity: "medium", description: "Random data generation" },
+          { regex: /(?:CreateMutex|OpenMutex).*?[\w-]{20,}/gi, severity: "high", description: "Mutex creation (persistence)" },
+          { regex: /RegSetValue|RegCreateKey|AddMonitor/gi, severity: "high", description: "Registry/system modification" },
+          { regex: /CreateService|OpenService|StartService/gi, severity: "high", description: "Service manipulation" },
+          { regex: /WinExec|ShellExecute|ShellExecuteEx/gi, severity: "critical", description: "Program execution API" },
+          { regex: /strstr|strcpy|memcpy|malloc|memset/gi, severity: "medium", description: "Memory manipulation function" },
+          { regex: /URLDownloadToFile|DownloadFile|XMLHTTP/gi, severity: "high", description: "File download function" }
+        ],
+        description: "Detection of payload signatures including obfuscated shellcode, reverse shells, and dynamic code execution."
+      },
+      jbig2Trick: {
+        patterns: [
+          { 
+            regex: /(?=.*\/Filter\s*\/JBIG2Decode)(?=.*\/Height\s+1)(?=.*\/Width\s+(\d{3,}))/gi, 
+            severity: "critical",
+            description: "JBIG2 trick with abnormal dimensions" 
+          },
+          {
+            regex: /\/JBIG2Decode.*?\/Width\s+(\d+).*?\/Height\s+(\d+)/gi,
+            severity: "high", 
+            description: "JBIG2 image with suspicious dimensions"
+          },
+          {
+            regex: /\/JBIG2Globals/gi,
+            severity: "medium",
+            description: "JBIG2 globals dictionary"
+          }
+        ],
+        description: "Detection of malicious JBIG2 trick using abnormal image dimensions (e.g. width > 100px and height = 1)."
+      },
+      fileInclusionAttacks: {
+        patterns: [
+          { regex: /require\s*\(\s*['"][^'"]+\$.*?['"]/, severity: "critical", description: "PHP dynamic file inclusion" },
+          { regex: /include\s*\(\s*['"][^'"]+\$.*?['"]/, severity: "critical", description: "PHP dynamic file inclusion" },
+          { regex: /import\s+.*?\s+from\s+['"][^'"]+\$.*?['"]/, severity: "critical", description: "JavaScript dynamic import" },
+          { regex: /load\s*\(\s*['"][^'"]+\$.*?['"]/, severity: "high", description: "Dynamic loading" },
+          { regex: /\.\.\//g, severity: "high", description: "Directory traversal" },
+          { regex: /%(25)+/, severity: "high", description: "Double URL encoding" },
+          { regex: /\.\.%2f/gi, severity: "high", description: "Encoded directory traversal" },
+          { regex: /file:\/\/\/etc\/passwd/gi, severity: "critical", description: "Unix password file access" },
+          { regex: /file:\/\/\/c:\\/gi, severity: "critical", description: "Windows root directory access" },
+          { regex: /php:\/\/filter\/|php:\/\/input/gi, severity: "critical", description: "PHP stream wrapper" },
+          { regex: /data:text\/html/gi, severity: "high", description: "Data URI HTML content" },
+          { regex: /jar:file:/gi, severity: "high", description: "JAR protocol exploitation" },
+          { regex: /file:\/\/\/\/\/\//gi, severity: "high", description: "UNC path (file://////)" },
+          { regex: /gopher:\/\/|dict:\/\//gi, severity: "high", description: "Unusual protocol" }
+        ],
+        description: "Detection of file inclusion vulnerabilities, directory traversal attempts, and protocol-based attacks."
+      },
+      sensitiveInformation: {
+        patterns: [
+          { regex: /\b(?:password|passwd|pwd)\s*[:=]\s*['"][^'"]{3,}['"]/, severity: "critical", description: "Password in plaintext" },
+          { regex: /\b(?:apikey|api_key|api[-_]?token|access[-_]?token)\s*[:=]\s*['"][^'"]{3,}['"]/, severity: "critical", description: "API key or token" },
+          { regex: /\b(?:secret|private[-_]?key)\s*[:=]\s*['"][^'"]{3,}['"]/, severity: "critical", description: "Secret or private key" },
+          { regex: /-----BEGIN\s+(?:RSA|DSA|EC|PGP|OPENSSH)\s+PRIVATE\s+KEY-----/, severity: "critical", description: "Private key block" },
+          { regex: /\b(?:aws_access_key_id|aws_secret_access_key)\s*[:=]/, severity: "critical", description: "AWS credentials" },
+          { regex: /\b(?:jdbc:|mongodb:\/\/|redis:\/\/|postgres:\/\/)([^:]+):([^@]+)@/, severity: "critical", description: "Database connection string" },
+          { regex: /\b(?:\d{3}-\d{2}-\d{4})/, severity: "high", description: "US Social Security Number" },
+          { regex: /\b(?:\d{4}-\d{4}-\d{4}-\d{4}|\d{4}\s\d{4}\s\d{4}\s\d{4}|\d{16})/, severity: "high", description: "Credit card number" },
+          { regex: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}\b/, severity: "medium", description: "Email address" },
+          { regex: /\bip\s*[:=]\s*['"](\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})['"]/, severity: "medium", description: "IP address assignment" },
+          { regex: /\b(?:account|acct)[-_]?(?:number|num|no)\s*[:=]\s*['"][^'"]{3,}['"]/, severity: "high", description: "Account number" },
+          { regex: /\b(?:authorization|auth)[-_]?header\s*[:=]\s*['"]Bearer\s+[^'"]+['"]/, severity: "critical", description: "Bearer token" },
+          { regex: /-----BEGIN\s+CERTIFICATE-----/, severity: "medium", description: "Certificate data" },
+          { regex: /eyJ[A-Za-z0-9\-_]+\.eyJ[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+/, severity: "high", description: "JWT token" },
+          { regex: /github_pat_[A-Za-z0-9_]{82}/, severity: "critical", description: "GitHub Personal Access Token" },
+          { regex: /xox[baprs]-[0-9]{12}-[0-9]{12}-[0-9]{12}-[a-zA-Z0-9]{32}/, severity: "critical", description: "Slack token" }
+        ],
+        description: "Detection of exposed sensitive information like credentials, API keys, tokens, and personally identifiable information."
+      },
+      cryptographicOperations: {
+        patterns: [
+          { regex: /\bcrypto\..+?\(|\bcipher\..+?\(|\bhash\..+?\(/gi, severity: "medium", description: "Cryptographic operation" },
+          { regex: /\.encrypt\(|\.decrypt\(/gi, severity: "medium", description: "Encryption/decryption method" },
+          { regex: /AES\.|Rijndael\.|RSA\.|DSA\.|ECDSA\.|TripleDES/gi, severity: "medium", description: "Cryptographic algorithm" },
+          { regex: /MD5\(|SHA1\(|SHA256\(|SHA512\(/gi, severity: "medium", description: "Hash function call" },
+          { regex: /CryptoJS\.[A-Za-z]+\(/gi, severity: "medium", description: "CryptoJS usage" },
+          { regex: /new\s+(?:AesManaged|AesCryptoServiceProvider|RijndaelManaged|RSACryptoServiceProvider)/gi, severity: "medium", description: ".NET cryptography" },
+          { regex: /PyCrypto|Crypto\.Cipher|Crypto\.Hash|Crypto\.PublicKey/gi, severity: "medium", description: "Python cryptography" },
+          { regex: /javax\.crypto\.|java\.security\.|java\.security\.MessageDigest/gi, severity: "medium", description: "Java cryptography" },
+          { regex: /OpenSSL_encrypt|EVP_EncryptInit|EVP_DecryptInit/gi, severity: "medium", description: "OpenSSL functions" },
+          { regex: /bcrypt\.hash|bcrypt\.compare|scrypt\(/gi, severity: "medium", description: "Password hashing" },
+          { regex: /PBKDF2|argon2/gi, severity: "medium", description: "Key derivation function" },
+          { regex: /generateKey|generateKeyPair|importKey|deriveKey/gi, severity: "medium", description: "Key generation/management" },
+          { regex: /CBC|ECB|GCM|CTR/gi, severity: "low", description: "Encryption mode" },
+          { regex: /encodeBase64|decodeBase64|Base64\.encode|Base64\.decode/gi, severity: "low", description: "Base64 encoding/decoding" }
+        ],
+        description: "Detection of cryptographic operations, potentially used for payload decryption or sensitive data handling."
+      },
+      anomalousPatterns: {
+        patterns: [
+          { regex: /\b(\w+)(?:["'`]){0,1}\s*\+\s*(?:["'`]){0,1}(\w+)\b/gi, severity: "medium", description: "String concatenation" },
+          { regex: /\[["'](\w+)["']\]\s*\(/gi, severity: "high", description: "Bracket notation function call" },
+          { regex: /\(\s*['"]\s*\+/gi, severity: "high", description: "Concatenated execution" },
+          { regex: /\b(?:0[xX][0-9a-fA-F]+){5,}/gi, severity: "medium", description: "Multiple hex values" },
+          { regex: /new\s+ActiveXObject\(/gi, severity: "high", description: "ActiveX instantiation" },
+          { regex: /\(\s*\+\s*\+\s*\!/gi, severity: "high", description: "Obfuscated type conversion" },
+          { regex: /\(\s*\+\s*[\[{!]/gi, severity: "high", description: "JavaScript type coercion" },
+          { regex: /(\w+)\["([^"]+)"\]\["([^"]+)"\]/gi, severity: "medium", description: "Nested property access" },
+          { regex: /\((['"]).*?\1\)\.constructor/gi, severity: "high", description: "Constructor property access" },
+          { regex: /\[[^\]]+\]\s*\[[^\]]+\]/gi, severity: "medium", description: "Multiple bracket notation" },
+          { regex: /\b(this|self|window|document|global)\s*\[\s*['"](\w+)['"]\s*\]/gi, severity: "medium", description: "Dynamic global property access" },
+          { regex: /\b(Object|Array|String|RegExp|Function|Boolean|Number)\.prototype\.(.*?)\s*=/gi, severity: "high", description: "Prototype modification" },
+          { regex: /function\s*\(\s*\)\s*\{\s*\[native code\]\s*\}/gi, severity: "high", description: "Native code function spoofing" },
+          { regex: /arguments\.callee/gi, severity: "medium", description: "Arguments callee reference" },
+          { regex: /data:(?!image\/)[^;]+;base64,/gi, severity: "high", description: "Non-image Data URI" },
+          { regex: /\b(fso|wsh|wscript)\.([a-zA-Z]+)\(/gi, severity: "high", description: "Windows scripting host object" },
+          { regex: /\bfreeze\s*\(|\bdefineProperty\s*\(/gi, severity: "medium", description: "Object manipulation" },
+          { regex: /\bescape\s*\(|\bunescape\s*\(/gi, severity: "medium", description: "URL encoding/decoding" },
+          { regex: /\\\\r|\\\\n|\\\\t/gi, severity: "low", description: "Double-escaped whitespace" },
+          { regex: /String\.prototype\.replace\.call\(/gi, severity: "high", description: "String prototype method borrowing" }
+        ],
+        description: "Detection of unusual code patterns that often indicate obfuscation, evasion, or exploitation techniques."
+      }
+    };
+    
+    /**
+     * Helper & Utility Functions
+     */
+    
+    // Format bytes to human-readable size
+    function formatBytes(bytes, decimals = 2) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const dm = decimals < 0 ? 0 : decimals;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+    }
+    
+    // Escape HTML to prevent XSS
+    function escapeHtml(unsafe) {
+      return unsafe
+        .toString()
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+    
+    // Format timestamp to human-readable date
+    function formatTimestamp(timestamp) {
+      const date = new Date(timestamp * 1000); // Convert UNIX timestamp to milliseconds
+      return date.toLocaleString();
+    }
+    
+    // Create a hash from the first few kb of a file for quick identification
+    async function createFileFingerprint(arrayBuffer) {
+      // Take first 8kb for fingerprinting
+      const dataView = new Uint8Array(arrayBuffer.slice(0, 8192));
+      return CryptoJS.MD5(CryptoJS.lib.WordArray.create(dataView)).toString();
+    }
+    
+    // Convert severity to color class
+    function getSeverityColorClass(severity) {
+      switch(severity.toLowerCase()) {
+        case 'critical': return 'bg-red-100 text-red-800 border-red-300';
+        case 'high': return 'bg-orange-100 text-orange-800 border-orange-300';
+        case 'medium': return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+        case 'low': return 'bg-blue-100 text-blue-800 border-blue-300';
+        case 'info': return 'bg-gray-100 text-gray-800 border-gray-300';
+        default: return 'bg-gray-100 text-gray-800 border-gray-300';
+      }
+    }
+    
+    // Format category name for display
+    function formatCategoryName(category) {
+      return category
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, str => str.toUpperCase())
+        .trim();
+    }
+    
+    /**
+     * Core PDF Analyzer Class
+     * Handles in-depth analysis of PDF documents
+     */
+    class PDFAnalyzer {
+      constructor() {
+        this.results = {
+          metadata: {},
+          security: {},
+          structure: {
+            pages: [],
+            annotations: [],
+            actions: [],
+            embeddedFiles: []
+          },
+          text: "",
+          xrefEntries: [],
+          objects: [],
+          deepAnnotations: [],
+          rawScanFindings: [],
+          stats: { 
+            threatScore: 0, 
+            totalIssues: 0,
+            criticalCount: 0,
+            highCount: 0,
+            mediumCount: 0,
+            lowCount: 0,
+            infoCount: 0
+          },
+          insights: []
+        };
+        this.pdfDocument = null;
+      }
+    
+      /**
+       * Main analysis method that orchestrates the entire process
+       */
+      async analyzePDF(arrayBuffer, options = {}) {
+        try {
+          // Default options
+          const opts = {
+            deepAnalysis: true,
+            extractText: true,
+            checkEmbedded: true,
+            analyzeStructure: true,
+            renderPreview: true,
+            ...options
+          };
+          
+          this.updateProgress(0, "Initializing analysis...");
+          this.updateStepStatus('step1Status', 'In Progress');
+          
+          // Create a fresh copy of the ArrayBuffer to avoid detachment errors
+          const typedArray = new Uint8Array(arrayBuffer);
+          const freshBuffer = typedArray.slice(0).buffer;
+          
+          // Calculate hash of the file
+          this.results.fileHash = CryptoJS.SHA256(CryptoJS.lib.WordArray.create(freshBuffer)).toString();
+          this.results.fileFingerprint = await createFileFingerprint(freshBuffer);
+          
+          // Perform raw binary scan first (works even if PDF.js parsing fails)
+          this.updateProgress(10, "Scanning raw binary data...");
+          const rawScanReport = this.scanRawPDFData(freshBuffer);
+          this.results.rawScanFindings = rawScanReport.findings;
+          
+          let pdf;
+          try {
+            // Load PDF with PDF.js
+            this.updateProgress(20, "Loading PDF document...");
+            pdf = await pdfjsLib.getDocument({ 
+              data: freshBuffer,
+              // Enable these for more detailed info
+              disableFontFace: true,
+              disableRange: true,
+              disableStream: true,
+              disableAutoFetch: true
+            }).promise;
+            
+            this.pdfDocument = pdf;
+            this.updateStepStatus('step1Status', 'Complete');
+          } catch (pdfError) {
+            console.warn("PDF.js parsing error: " + pdfError.message);
+            this.results.error = pdfError.message;
+            this.results.metadata = { 
+              version: "Unknown", 
+              pageCount: 0, 
+              encrypted: false, 
+              error: pdfError.message 
+            };
+            
+            // Still try to analyze as much as possible from raw data
+            this.results.text = new TextDecoder().decode(new Uint8Array(freshBuffer));
+            
+            this.updateStepStatus('step1Status', 'Error');
+            this.updateStepStatus('step2Status', 'Skipped');
+            this.updateStepStatus('step3Status', 'In Progress');
+            
+            this.updateProgress(80, "Performing security analysis on raw data...");
+            await this.performSecurityAnalysis();
+            
+            this.updateStepStatus('step3Status', 'Complete');
+            this.updateStepStatus('step4Status', 'In Progress');
+            
+            this.updateProgress(90, "Calculating threat score...");
+            this.calculateThreatScore();
+            this.generateInsights();
+            
+            this.updateStepStatus('step4Status', 'Complete');
+            this.updateProgress(100, "Analysis complete (raw scan only)");
+            
+            return this.results;
+          }
+          
+          // Extract metadata
+          this.updateProgress(30, "Extracting metadata...");
+          this.updateStepStatus('step2Status', 'In Progress');
+          await this.extractMetadata(pdf);
+          
+          // Analyze PDF structure if enabled
+          if (opts.analyzeStructure) {
+            this.updateProgress(40, "Analyzing PDF structure...");
+            await this.analyzePDFStructure(pdf);
+          }
+          
+          // Extract text content if enabled
+          if (opts.extractText) {
+            this.updateProgress(50, "Extracting text content...");
+            await this.extractContent(pdf);
+          }
+          
+          // Parse annotations with deep scan if enabled
+          if (opts.deepAnalysis) {
+            this.updateProgress(60, "Parsing annotations and actions...");
+            await this.deepScanAnnotations(pdf);
+          }
+          
+          // Scan for embedded files if enabled
+          if (opts.checkEmbedded) {
+            this.updateProgress(65, "Checking for embedded files...");
+            await this.checkEmbeddedFiles(pdf);
+          }
+          
+          this.updateStepStatus('step2Status', 'Complete');
+          this.updateStepStatus('step3Status', 'In Progress');
+          
+          // Perform security analysis
+          this.updateProgress(70, "Performing security analysis...");
+          await this.performSecurityAnalysis();
+          
+          this.updateStepStatus('step3Status', 'Complete');
+          this.updateStepStatus('step4Status', 'In Progress');
+          
+          // Calculate final threat score and generate insights
+          this.updateProgress(80, "Calculating threat score...");
+          this.calculateThreatScore();
+          
+          // Generate insights based on findings
+          this.updateProgress(90, "Generating insights...");
+          this.generateInsights();
+          
+          this.updateStepStatus('step4Status', 'Complete');
+          this.updateProgress(100, "Analysis complete");
+          
+          return this.results;
+        } catch (error) {
+          console.error("Analysis failed:", error);
+          this.updateStepStatus('step4Status', 'Error');
+          throw new Error(`PDF Analysis failed: ${error.message}`);
+        }
+      }
+    
+      /**
+       * Scan raw PDF data for signatures and patterns
+       * This is effective even if the PDF structure is corrupted
+       */
+      scanRawPDFData(arrayBuffer) {
+        const findings = [];
+        const rawBytes = new Uint8Array(arrayBuffer);
+        const textData = new TextDecoder('utf-8', { fatal: false }).decode(rawBytes);
+        
+        // Check for embedded files
+        const embedMatch = textData.match(/\/EmbeddedFile|\/Filespec/gi);
+        if (embedMatch) {
+          findings.push({ 
+            type: "Potential EmbeddedFile", 
+            message: `Detected ${embedMatch.length} reference(s) to /EmbeddedFile or /Filespec`, 
+            severity: "high" 
+          });
+        }
+        
+        // Check for XFA forms
+        const xfaMatch = textData.match(/\/XFA/gi);
+        if (xfaMatch) {
+          findings.push({ 
+            type: "XFA Detected", 
+            message: `Detected ${xfaMatch.length} reference(s) to /XFA (XML Forms)`, 
+            severity: "medium" 
+          });
+        }
+        
+        // Check for OpenAction which automatically executes when PDF is opened
+        const openActionMatch = textData.match(/\/OpenAction/gi);
+        if (openActionMatch) {
+          findings.push({ 
+            type: "OpenAction Detected", 
+            message: `Detected ${openActionMatch.length} reference(s) to /OpenAction (automatic execution)`, 
+            severity: "high" 
+          });
+        }
+        
+        // Check for JavaScript actions
+        const jsMatch = textData.match(/\/JavaScript|\/JS/gi);
+        if (jsMatch) {
+          findings.push({ 
+            type: "JavaScript Detected", 
+            message: `Detected ${jsMatch.length} reference(s) to JavaScript`, 
+            severity: "high" 
+          });
+        }
+        
+        // Check for Launch actions (can execute external programs)
+        const launchMatch = textData.match(/\/Launch/gi);
+        if (launchMatch) {
+          findings.push({ 
+            type: "Launch Action Detected", 
+            message: `Detected ${launchMatch.length} reference(s) to /Launch (can execute external programs)`, 
+            severity: "critical" 
+          });
+        }
+        
+        // Check for common binary file signatures (polyglot files)
+        const signatureMap = [
+          { name: "ZIP/Office document", regex: /\x50\x4B\x03\x04/g, severity: "medium" },
+          { name: "OLE2/Doc", regex: /\xD0\xCF\x11\xE0/g, severity: "medium" },
+          { name: "PE EXE", regex: /\x4D\x5A/g, severity: "high" },
+          { name: "ELF", regex: /\x7F\x45\x4C\x46/g, severity: "high" },
+          { name: "JPEG", regex: /\xFF\xD8\xFF/g, severity: "low" },
+          { name: "PNG", regex: /\x89\x50\x4E\x47/g, severity: "low" },
+          { name: "GIF", regex: /\x47\x49\x46\x38/g, severity: "low" }
+        ];
+        
+        // Convert Uint8Array to string for regex matching of binary patterns
+        const binaryString = Array.from(rawBytes.slice(0, 4096))
+          .map(byte => String.fromCharCode(byte))
+          .join('');
+          
+        for (const sig of signatureMap) {
+          if (sig.regex.test(binaryString)) {
+            findings.push({ 
+              type: "Polyglot File Signature", 
+              message: `Detected possible ${sig.name} signature in PDF data`, 
+              severity: sig.severity 
+            });
+          }
+        }
+        
+        // Check for suspicious compression/encoding filters
+        const suspiciousFilters = [
+          { name: "JBIG2Decode", regex: /\/JBIG2Decode/gi, severity: "high" },
+          { name: "JPXDecode", regex: /\/JPXDecode/gi, severity: "medium" },
+          { name: "Crypt", regex: /\/Crypt/gi, severity: "high" }
+        ];
+        
+        for (const filter of suspiciousFilters) {
+          const matches = textData.match(filter.regex);
+          if (matches && matches.length > 0) {
+            findings.push({ 
+              type: "Suspicious Filter", 
+              message: `Detected ${matches.length} instance(s) of ${filter.name} filter`, 
+              severity: filter.severity 
+            });
+          }
+        }
+        
+        // Detect potential JBIG2 exploitation trick
+        const jbig2HeightMatch = textData.match(/\/JBIG2Decode.*?\/Height\s+1/gi);
+        if (jbig2HeightMatch) {
+          findings.push({ 
+            type: "JBIG2 Exploitation", 
+            message: `Detected potential JBIG2 vulnerability exploitation (Height=1)`, 
+            severity: "critical" 
+          });
+        }
+        
+        return { findings };
+      }
+    
+      /**
+       * Extract metadata from the PDF document
+       */
+      async extractMetadata(pdf) {
+        try {
+          const metadata = await pdf.getMetadata();
+          
+          // Basic metadata
+          this.results.metadata = {
+            version: pdf?.pdfInfo?.version || 'Unknown',
+            pageCount: pdf.numPages,
+            encrypted: pdf?.pdfInfo?.encrypted || false,
+            fileSize: null, // Will be set by UI
+            linearized: pdf?.pdfInfo?.linearized || false,
+            info: {},
+            xmp: {}
+          };
+          
+          // Extract document info dictionary
+          if (metadata.info) {
+            this.results.metadata.info = { ...metadata.info };
+            
+            // Convert dates to readable format
+            if (metadata.info.CreationDate) {
+              try {
+                const pdfDateStr = metadata.info.CreationDate;
+                // Try to parse PDF date format (D:YYYYMMDDHHmmSS+HH'mm')
+                if (pdfDateStr.startsWith('D:')) {
+                  const dateStr = pdfDateStr.substring(2);
+                  const year = dateStr.substring(0, 4);
+                  const month = dateStr.substring(4, 6);
+                  const day = dateStr.substring(6, 8);
+                  const hour = dateStr.substring(8, 10) || '00';
+                  const minute = dateStr.substring(10, 12) || '00';
+                  const second = dateStr.substring(12, 14) || '00';
+                  this.results.metadata.info.CreationDate = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+                }
+              } catch (e) {
+                // Keep original if parsing fails
+              }
+            }
+            
+            if (metadata.info.ModDate) {
+              try {
+                const pdfDateStr = metadata.info.ModDate;
+                if (pdfDateStr.startsWith('D:')) {
+                  const dateStr = pdfDateStr.substring(2);
+                  const year = dateStr.substring(0, 4);
+                  const month = dateStr.substring(4, 6);
+                  const day = dateStr.substring(6, 8);
+                  const hour = dateStr.substring(8, 10) || '00';
+                  const minute = dateStr.substring(10, 12) || '00';
+                  const second = dateStr.substring(12, 14) || '00';
+                  this.results.metadata.info.ModDate = `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+                }
+              } catch (e) {
+                // Keep original if parsing fails
+              }
+            }
+          }
+          
+          // Extract XMP metadata if available
+          if (metadata.metadata) {
+            try {
+              const xmp = metadata.metadata.metadata;
+              if (xmp) {
+                this.results.metadata.xmp = xmp;
+                
+                // Extract creator tool info
+                if (xmp['xmp:CreatorTool']) {
+                  this.results.metadata.creatorTool = xmp['xmp:CreatorTool'];
+                }
+                
+                // Extract producer info
+                if (xmp['pdf:Producer']) {
+                  this.results.metadata.producer = xmp['pdf:Producer'];
+                }
+              }
+            } catch (e) {
+              console.warn('Error extracting XMP metadata:', e);
+            }
+          }
+          
+        } catch (error) {
+          console.warn('Metadata extraction error:', error);
+          this.results.metadata = { 
+            version: 'Unknown', 
+            pageCount: pdf.numPages, 
+            encrypted: false, 
+            error: 'Failed to extract metadata' 
+          };
+        }
+      }
+    
+      /**
+       * Analyze PDF structure including pages, outlines, and actions
+       */
+      async analyzePDFStructure(pdf) {
+        this.results.structure = { 
+          pages: [], 
+          annotations: [], 
+          actions: [],
+          outlines: [],
+          acroform: false,
+          xfa: false
+        };
+        
+        try {
+          // Get document permissions and encryption info
+          if (pdf.getPermissions) {
+            const permissions = await pdf.getPermissions();
+            this.results.structure.permissions = permissions;
+          }
+          
+          // Analyze each page
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            
+            // Get page annotations
+            const annotations = await page.getAnnotations();
+            this.results.structure.annotations.push(...annotations.map(a => ({
+              ...a,
+              pageNumber: i
+            })));
+            
+            // Check for JavaScript in annotations
+            const jsAnnotations = annotations.filter(a => 
+              a.subtype === 'Link' && 
+              a.action && 
+              (a.action.type === 'JavaScript' || (a.action.script && a.action.script.includes('JavaScript')))
+            );
+            
+            // Check for actions in annotations
+            const actionAnnotations = annotations.filter(a => a.action);
+            
+            if (actionAnnotations.length > 0) {
+              this.results.structure.actions.push(
+                ...actionAnnotations.map(a => ({
+                  pageNumber: i,
+                  type: a.action.type || 'Unknown',
+                  subtype: a.subtype,
+                  details: a.action
+                }))
+              );
+            }
+            
+            // Get page dimensions
+            const viewport = page.getViewport({ scale: 1.0 });
+            
+            // Collect page structure information
+            const pageStructure = {
+              pageNumber: i,
+              width: Math.round(viewport.width),
+              height: Math.round(viewport.height),
+              rotation: page.rotate || 0,
+              annotations: annotations.length,
+              hasJavaScript: jsAnnotations.length > 0,
+              hasLinks: annotations.some(a => a.subtype === 'Link'),
+              hasActions: actionAnnotations.length > 0,
+              actionTypes: [...new Set(actionAnnotations.map(a => a.action.type || 'Unknown'))]
+            };
+            
+            this.results.structure.pages.push(pageStructure);
+          }
+          
+          // Check for document-level JavaScript actions
+          try {
+            const jsActions = await pdf.getJavaScript();
+            if (jsActions && jsActions.length > 0) {
+              this.results.structure.javascriptActions = jsActions;
+              
+              // Add to actions list
+              jsActions.forEach(js => {
+                this.results.structure.actions.push({
+                  pageNumber: null, // Document level
+                  type: 'JavaScript',
+                  subtype: 'DocumentLevel',
+                  details: { script: js }
+                });
+              });
+            }
+          } catch (e) {
+            console.warn('Error getting JavaScript actions:', e);
+          }
+          
+          // Check for AcroForm
+          try {
+            const form = await pdf.getForm();
+            if (form) {
+              this.results.structure.acroform = true;
+              this.results.structure.formFields = [];
+              
+              // Get form fields if available
+              const fields = form.getFields();
+              if (fields && fields.length > 0) {
+                this.results.structure.formFields = fields.map(field => ({
+                  name: field.name,
+                  type: field.type,
+                  value: field.value,
+                  isRequired: field.required
+                }));
+              }
+            }
+          } catch (e) {
+            console.warn('Error checking for AcroForm:', e);
+          }
+          
+          // Check for XFA forms
+          try {
+            const catalog = await pdf.getCatalog();
+            if (catalog && catalog.xfa) {
+              this.results.structure.xfa = true;
+            }
+          } catch (e) {
+            console.warn('Error checking for XFA:', e);
+          }
+          
+          // Get document outline if available
+          try {
+            const outline = await pdf.getOutline();
+            if (outline && outline.length > 0) {
+              this.results.structure.outlines = outline;
+            }
+          } catch (e) {
+            console.warn('Error getting document outline:', e);
+          }
+          
+        } catch (error) {
+          console.warn('Structure analysis error:', error);
+          this.results.structure.error = error.message;
+        }
+      }
+    
+      /**
+       * Extract text content from the PDF
+       */
+      async extractContent(pdf) {
+        let text = "";
+        const totalPages = pdf.numPages;
+        
+        // Process pages in batches to avoid memory issues with large documents
+        const batchSize = 10;
+        const batches = Math.ceil(totalPages / batchSize);
+        
+        for (let batch = 0; batch < batches; batch++) {
+          const startPage = batch * batchSize + 1;
+          const endPage = Math.min((batch + 1) * batchSize, totalPages);
+          
+          for (let i = startPage; i <= endPage; i++) {
+            this.updateProgress(30 + Math.floor((i / totalPages) * 20), 
+              `Extracting text from page ${i}/${totalPages}`);
+            
+            try {
+              const page = await pdf.getPage(i);
+              const content = await page.getTextContent();
+              const pageText = content.items.map(item => item.str).join(" ");
+              text += `--- Page ${i} ---\n${pageText}\n\n`;
+            } catch (error) {
+              console.warn(`Error extracting text from page ${i}:`, error);
+              text += `[Error extracting page ${i}]\n\n`;
+            }
+          }
+        }
+        
+        this.results.text = text;
+      }
+    
+      /**
+       * Perform a deep scan of PDF annotations
+       */
+      async deepScanAnnotations(pdf) {
+        try {
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const annotations = await page.getAnnotations({ intent: 'display' });
+            
+            for (const ann of annotations) {
+              const details = {
+                page: i,
+                subtype: ann.subtype || "Unknown",
+                fieldName: ann.fieldName || "",
+                id: ann.id || "",
+                url: ann.url || "",
+                contents: ann.contents || "",
+                rect: ann.rect ? [...ann.rect] : [],
+                color: ann.color ? [...ann.color] : [],
+                flags: ann.flags || null,
+                actions: null
+              };
+              
+              // Add action details if present
+              if (ann.action) {
+                details.actions = JSON.stringify(ann.action);
+                
+                // Check for potentially dangerous actions
+                if (ann.action.type === 'JavaScript') {
+                  details.script = ann.action.script || "";
+                  details.danger = "Contains JavaScript";
+                } else if (ann.action.type === 'Launch') {
+                  details.danger = "Can launch external application";
+                } else if (ann.action.type === 'URI') {
+                  details.danger = ann.action.uri?.includes('javascript:') ? 
+                    "JavaScript URI" : "External URL";
+                }
+              }
+              
+              this.results.deepAnnotations.push(details);
+            }
+          }
+        } catch (error) {
+          console.warn('deepScanAnnotations error:', error);
+        }
+      }
+    
+      /**
+       * Check for embedded files in the PDF
+       */
+      async checkEmbeddedFiles(pdf) {
+        try {
+          // Try to get embedded files via attachments API
+          const attachments = await pdf.getAttachments();
+          if (attachments) {
+            const fileKeys = Object.keys(attachments);
+            for (const key of fileKeys) {
+              const file = attachments[key];
+              this.results.structure.embeddedFiles = this.results.structure.embeddedFiles || [];
+              this.results.structure.embeddedFiles.push({
+                filename: file.filename,
+                description: file.description,
+                filesize: file.content ? file.content.length : 0,
+                mimetype: file.mimetype || "unknown",
+                created: file.created,
+                modified: file.modified
+              });
+            }
+          }
+          
+          // Additionally scan for FileSpec objects that might not be in attachments
+          // This is a more thorough way to find embedded files
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const operatorList = await page.getOperatorList();
+            
+            for (const op of operatorList.fnArray) {
+              if (op === pdfjsLib.OPS.setAttachmentData || op === pdfjsLib.OPS.FileAttachment) {
+                // Found embedded file reference in page content
+                this.results.rawScanFindings.push({
+                  type: "Embedded File",
+                  message: `Detected embedded file in page ${i} content stream`,
+                  severity: "medium"
+                });
+              }
+            }
+          }
+        } catch (error) {
+          console.warn('checkEmbeddedFiles error:', error);
+        }
+      }
+    
+      /**
+       * Perform comprehensive security analysis across all categories
+       */
+      async performSecurityAnalysis() {
+        this.results.security = {};
+        
+        // Prepare all text sources for analysis
+        const textSources = [
+          { text: this.results.text, source: "Text" },
+          { text: this.results.deepAnnotations.map(obj => JSON.stringify(obj)).join("\n"), source: "Annotation" },
+          { text: this.results.rawScanFindings.map(item => JSON.stringify(item)).join("\n"), source: "RawScan" },
+          { text: this.results.structure.actions?.map(action => JSON.stringify(action)).join("\n") || "", source: "Action" },
+          { text: this.results.structure.javascriptActions?.join("\n") || "", source: "JS" }
+        ];
+        
+        // Process each security pattern category
+        for (const [category, data] of Object.entries(securityPatterns)) {
+          this.results.security[category] = [];
+          
+          // Check each pattern against all text sources
+          for (const source of textSources) {
+            const matches = this.matchPatterns(source.text, data.patterns, source.source);
+            this.results.security[category].push(...matches);
+          }
+        }
+        
+        // Perform additional deep analysis based on findings
+        await this.performDeepAnalysis();
+      }
+    
+      /**
+       * Match text against pattern set and record findings
+       */
+      matchPatterns(text, patterns, source) {
+        const findings = [];
+        
+        for (const { regex, severity, description } of patterns) {
+          // Clone regex to reset lastIndex
+          const regexClone = new RegExp(regex.source, regex.flags);
+          const matches = text.match(regexClone);
+          
+          if (matches && matches.length > 0) {
+            findings.push({
+              severity,
+              matches: matches.length,
+              examples: matches.slice(0, 3).map(m => m.substring(0, 200)), // Limit example length
+              pattern: regex.source,
+              description: description || "Pattern match",
+              source
+            });
+          }
+        }
+        
+        return findings;
+      }
+    
+      /**
+       * Perform additional deep analysis based on initial findings
+       */
+      async performDeepAnalysis() {
+        // Check for chains of suspicious activities
+        // For example, both JavaScript and network activity
+        const hasJavaScript = this.results.security.javascript?.some(f => f.matches > 0) || false;
+        const hasNetwork = this.results.security.networkActivity?.some(f => f.matches > 0) || false;
+        const hasLaunch = this.results.security.pdfStructure?.some(f => 
+          f.pattern.includes('Launch') && f.matches > 0) || false;
+        
+        if (hasJavaScript && hasNetwork) {
+          this.results.rawScanFindings.push({
+            type: "Behavior Chain",
+            message: "JavaScript combined with network activity - potential data exfiltration",
+            severity: "critical"
+          });
+        }
+        
+        if (hasJavaScript && hasLaunch) {
+          this.results.rawScanFindings.push({
+            type: "Behavior Chain",
+            message: "JavaScript combined with launch action - potential system compromise",
+            severity: "critical"
+          });
+        }
+        
+        // Check for obfuscation techniques
+        const hasObfuscation = this.results.security.obfuscationAndHidden?.some(f => f.matches > 0) || false;
+        
+        if (hasObfuscation && hasJavaScript) {
+          this.results.rawScanFindings.push({
+            type: "Obfuscation",
+            message: "Obfuscated JavaScript detected - potential evasion technique",
+            severity: "critical"
+          });
+        }
+        
+        // Check for suspicious strings in embedded files
+        if (this.results.structure.embeddedFiles && this.results.structure.embeddedFiles.length > 0) {
+          const executableExtensions = ['.exe', '.dll', '.bat', '.sh', '.ps1', '.vbs', '.js', '.jar'];
+          
+          for (const file of this.results.structure.embeddedFiles) {
+            // Check for executable file extensions
+            if (executableExtensions.some(ext => file.filename.toLowerCase().endsWith(ext))) {
+              this.results.rawScanFindings.push({
+                type: "Suspicious Embedded File",
+                message: `Embedded file with executable extension: ${file.filename}`,
+                severity: "critical"
+              });
+            }
+          }
+        }
+      }
+    
+      /**
+       * Calculate overall threat score based on findings
+       */
+      calculateThreatScore() {
+        const severityWeights = { 
+          critical: 100, 
+          high: 70, 
+          medium: 40, 
+          low: 10,
+          info: 1
+        };
+        
+        let totalScore = 0;
+        let totalIssues = 0;
+        let criticalCount = 0;
+        let highCount = 0;
+        let mediumCount = 0;
+        let lowCount = 0;
+        let infoCount = 0;
+        
+        // Process all security findings
+        for (const category of Object.values(this.results.security)) {
+          for (const finding of category) {
+            const weight = severityWeights[finding.severity] || severityWeights.low;
+            totalScore += weight * finding.matches;
+            totalIssues += finding.matches;
+            
+            // Count by severity
+            switch(finding.severity) {
+              case 'critical': criticalCount += finding.matches; break;
+              case 'high': highCount += finding.matches; break;
+              case 'medium': mediumCount += finding.matches; break;
+              case 'low': lowCount += finding.matches; break;
+              case 'info': infoCount += finding.matches; break;
+            }
+          }
+        }
+        
+        // Process raw scan findings
+        for (const finding of this.results.rawScanFindings) {
+          const weight = severityWeights[finding.severity] || severityWeights.low;
+          totalScore += weight;
+          totalIssues += 1;
+          
+          // Count by severity
+          switch(finding.severity) {
+            case 'critical': criticalCount += 1; break;
+            case 'high': highCount += 1; break;
+            case 'medium': mediumCount += 1; break;
+            case 'low': lowCount += 1; break;
+            case 'info': infoCount += 1; break;
+          }
+        }
+        
+        // Calculate final score
+        const finalScore = totalIssues > 0 ? 
+          Math.min(100, Math.round(totalScore / (totalIssues * 10) * 100)) : 0;
+        
+        this.results.stats = { 
+          threatScore: finalScore, 
+          totalIssues,
+          criticalCount,
+          highCount,
+          mediumCount,
+          lowCount,
+          infoCount
+        };
+        
+        // Determine threat level description
+        let threatLevel = "Safe";
+        if (finalScore >= 80) {
+          threatLevel = "Critical";
+        } else if (finalScore >= 60) {
+          threatLevel = "High";
+        } else if (finalScore >= 40) {
+          threatLevel = "Medium";
+        } else if (finalScore >= 20) {
+          threatLevel = "Low";
+        }
+        
+        this.results.stats.threatLevel = threatLevel;
+      }
+    
+      /**
+       * Generate actionable insights based on findings
+       */
+      generateInsights() {
+        const insights = [];
+        
+        // Check for critical JavaScript issues
+        if (this.results.security.javascript?.some(f => f.severity === 'critical' && f.matches > 0)) {
+          insights.push({
+            title: "Malicious JavaScript Detected",
+            description: "This PDF contains potentially dangerous JavaScript code which could execute when opened.",
+            recommendation: "Open this PDF only in viewers with JavaScript disabled, or avoid opening it entirely.",
+            severity: "critical"
+          });
+        }
+        
+        // Check for automatic actions
+        if (this.results.security.pdfStructure?.some(f => 
+          (f.pattern.includes('OpenAction') || f.pattern.includes('AA')) && f.matches > 0)) {
+          insights.push({
+            title: "Automatic Actions Present",
+            description: "This PDF contains actions that execute automatically when opened.",
+            recommendation: "Use a PDF viewer that prompts before executing actions, such as Adobe Reader with enhanced security.",
+            severity: "high"
+          });
+        }
+        
+        // Check for launch actions
+        if (this.results.security.pdfStructure?.some(f => f.pattern.includes('Launch') && f.matches > 0)) {
+          insights.push({
+            title: "External Program Execution",
+            description: "This PDF attempts to launch external applications.",
+            recommendation: "Never allow PDFs to launch external applications.",
+            severity: "critical"
+          });
+        }
+        
+        // Check for network connections
+        if (this.results.security.networkActivity?.some(f => f.matches > 0)) {
+          insights.push({
+            title: "External Network References",
+            description: "This PDF contains URLs or network references.",
+            recommendation: "Use a PDF viewer that blocks external connections or open in an isolated environment.",
+            severity: "medium"
+          });
+        }
+        
+        // Check for embedded files
+        if (this.results.structure.embeddedFiles && this.results.structure.embeddedFiles.length > 0) {
+          insights.push({
+            title: "Embedded Files Detected",
+            description: `This PDF contains ${this.results.structure.embeddedFiles.length} embedded file(s).`,
+            recommendation: "Do not extract or open embedded files from untrusted sources.",
+            severity: "high"
+          });
+        }
+        
+        // Check for excessive forms/fields (potential for data collection)
+        if (this.results.structure.formFields && this.results.structure.formFields.length > 5) {
+          insights.push({
+            title: "Extensive Form Fields",
+            description: `This PDF contains ${this.results.structure.formFields.length} form fields.`,
+            recommendation: "Be cautious about filling in PDF forms from untrusted sources.",
+            severity: "medium"
+          });
+        }
+        
+        // Check for obfuscation techniques
+        if (this.results.security.obfuscationAndHidden?.some(f => f.matches > 0)) {
+          insights.push({
+            title: "Obfuscation Techniques Detected",
+            description: "This PDF uses encoding or obfuscation techniques that may hide malicious content.",
+            recommendation: "Treat this document as suspicious and scan with multiple security tools.",
+            severity: "high"
+          });
+        }
+        
+        // Check for JBIG2 exploitation
+        if (this.results.security.jbig2Trick?.some(f => f.matches > 0)) {
+          insights.push({
+            title: "JBIG2 Exploitation Attempt",
+            description: "This PDF contains suspicious JBIG2 image encoding that may be exploiting CVE-2009-0658.",
+            recommendation: "Do not open this PDF. It may be attempting to exploit a known vulnerability.",
+            severity: "critical"
+          });
+        }
+        
+        this.results.insights = insights;
+      }
+    
+      /**
+       * Update analysis progress
+       */
+      updateProgress(percent, message) {
+        const event = new CustomEvent('analysisProgress', { 
+          detail: { 
+            percent, 
+            message 
+          } 
+        });
+        window.dispatchEvent(event);
+      }
+    
+      /**
+       * Update step status in the progress UI
+       */
+      updateStepStatus(elementId, status) {
+        const event = new CustomEvent('updateStepStatus', { 
+          detail: { 
+            elementId, 
+            status 
+          } 
+        });
+        window.dispatchEvent(event);
+      }
+    }
+    
+    /**
+     * UI Handler Class
+     * Manages the user interface components and interactions
+     */
+    class UIHandler {
+      constructor() {
+        this.analyzer = new PDFAnalyzer();
+        this.lastResults = null;
+        this.currentPage = 1;
+        this.zoomLevel = 1.0;
+        this.pdfInstance = null;
+        this.setupEventListeners();
+      }
+    
+      /**
+       * Set up all event listeners for UI interactions
+       */
+      setupEventListeners() {
+        // Dropzone handling
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('pdfInput');
+        
+        dropZone.addEventListener('dragover', (e) => { 
+          e.preventDefault(); 
+          dropZone.classList.add('dragover'); 
+        });
+        
+        dropZone.addEventListener('dragleave', () => { 
+          dropZone.classList.remove('dragover'); 
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropZone.classList.remove('dragover');
+          const file = e.dataTransfer.files[0];
+          if (file?.type === 'application/pdf') { 
+            fileInput.files = e.dataTransfer.files; 
+            this.handleFileSelection(file); 
+          } else { 
+            this.showNotification('Please drop a PDF file', 'error'); 
+          }
+        });
+        
+        // File input change
+        fileInput.addEventListener('change', () => {
+          const file = fileInput.files[0];
+          if (file) this.handleFileSelection(file);
+        });
+        
+        // Scan button click
+        document.getElementById('scanButton').addEventListener('click', () => {
+          const file = document.getElementById('pdfInput').files[0];
+          if (file) { 
+            this.handleFileSelection(file); 
+          } else { 
+            this.showNotification('Please select a PDF file', 'warning'); 
+          }
+        });
+        
+        // Progress update event
+        window.addEventListener('analysisProgress', (e) => { 
+          this.updateProgress(e.detail.percent, e.detail.message); 
+        });
+        
+        // Step status update event
+        window.addEventListener('updateStepStatus', (e) => {
+          this.updateStepStatus(e.detail.elementId, e.detail.status);
+        });
+        
+        // Tab navigation
+        document.querySelectorAll('.tab-button').forEach(button => {
+          button.addEventListener('click', () => this.switchTab(button.dataset.tab));
+        });
+        
+        // Export reports
+        document.getElementById('downloadReport').addEventListener('click', () => { 
+          this.generateJSONReport(this.lastResults); 
+        });
+        
+        document.getElementById('downloadPdfReport').addEventListener('click', () => { 
+          this.generatePDFReport(this.lastResults); 
+        });
+        
+        // PDF preview navigation
+        document.getElementById('prevPage').addEventListener('click', () => {
+          if (this.currentPage > 1) {
+            this.currentPage--;
+            this.renderPage(this.currentPage);
+          }
+        });
+        
+        document.getElementById('nextPage').addEventListener('click', () => {
+          if (this.pdfInstance && this.currentPage < this.pdfInstance.numPages) {
+            this.currentPage++;
+            this.renderPage(this.currentPage);
+          }
+        });
+        
+        // Zoom level change
+        document.getElementById('zoomLevel').addEventListener('change', (e) => {
+          this.zoomLevel = parseFloat(e.target.value);
+          this.renderPage(this.currentPage);
+        });
+        
+        // Security result filters
+        document.querySelectorAll('.severity-filter').forEach(btn => {
+          btn.addEventListener('click', () => this.filterSecurityResults(btn.dataset.severity));
+        });
+        
+        // Object search and filter
+        document.getElementById('objectSearch').addEventListener('input', (e) => {
+          this.filterObjects(e.target.value, document.getElementById('objectTypeFilter').value);
+        });
+        
+        document.getElementById('objectTypeFilter').addEventListener('change', (e) => {
+          this.filterObjects(document.getElementById('objectSearch').value, e.target.value);
+        });
+        
+        // Show critical details
+        document.getElementById('showCriticalDetails').addEventListener('click', () => {
+          this.switchTab('security');
+          this.filterSecurityResults('critical');
+        });
+        
+        // Modal handlers
+        document.getElementById('aboutButton').addEventListener('click', () => {
+          document.getElementById('aboutModal').classList.remove('hidden');
+        });
+        
+        document.getElementById('helpButton').addEventListener('click', () => {
+          document.getElementById('helpModal').classList.remove('hidden');
+        });
+        
+        document.getElementById('closeAboutModal').addEventListener('click', () => {
+          document.getElementById('aboutModal').classList.add('hidden');
+        });
+        
+        document.getElementById('closeAboutModalBtn').addEventListener('click', () => {
+          document.getElementById('aboutModal').classList.add('hidden');
+        });
+        
+        document.getElementById('closeHelpModal').addEventListener('click', () => {
+          document.getElementById('helpModal').classList.add('hidden');
+        });
+        
+        document.getElementById('closeHelpModalBtn').addEventListener('click', () => {
+          document.getElementById('helpModal').classList.add('hidden');
+        });
+      }
+    
+      /**
+       * Handle file selection and initiate analysis
+       */
+      async handleFileSelection(file) {
+        const scanButton = document.getElementById('scanButton');
+        const spinner = document.getElementById('spinner');
+        
+        try {
+          // Update UI
+          scanButton.disabled = true;
+          spinner.classList.remove('hidden');
+          document.getElementById('progressContainer').classList.remove('hidden');
+          document.getElementById('resultsDashboard').classList.add('hidden');
+          
+          // Reset step indicators
+          this.updateStepStatus('step1Status', 'Waiting...');
+          this.updateStepStatus('step2Status', 'Waiting...');
+          this.updateStepStatus('step3Status', 'Waiting...');
+          this.updateStepStatus('step4Status', 'Waiting...');
+          
+          // Display file details
+          document.getElementById('fileDetails').classList.remove('hidden');
+          document.getElementById('fileName').textContent = file.name;
+          document.getElementById('fileSize').textContent = formatBytes(file.size);
+          
+          // Update progress details
+          document.getElementById('progressDetails').textContent = `Analyzing: ${file.name} (${formatBytes(file.size)})`;
+          
+          // Get scan options
+          const options = {
+            deepAnalysis: document.getElementById('deepAnalysis').checked,
+            extractText: document.getElementById('extractText').checked,
+            checkEmbedded: document.getElementById('checkEmbedded').checked,
+            analyzeStructure: document.getElementById('analyzeStructure').checked,
+            renderPreview: document.getElementById('renderPreview').checked
+          };
+          
+          // Analyze file
+          const arrayBuffer = await file.arrayBuffer();
+          const results = await this.analyzer.analyzePDF(arrayBuffer, options);
+          
+          // Add file size to results
+          results.metadata.fileSize = file.size;
+          
+          // Store results for reporting
+          this.lastResults = results;
+          
+          // Display results
+          this.displayResults(results, file);
+          
+          // Render preview if enabled
+          if (options.renderPreview) {
+            this.loadPDFPreview(arrayBuffer);
+          }
+          
+        } catch (error) {
+          console.error(error);
+          this.showNotification(`Error analyzing PDF: ${error.message}`, 'error');
+        } finally {
+          scanButton.disabled = false;
+          spinner.classList.add('hidden');
+          document.getElementById('progressContainer').classList.add('hidden');
+        }
+      }
+    
+      /**
+       * Update progress bar and message
+       */
+      updateProgress(percent, message) {
+        const progressBar = document.getElementById('progressBar');
+        const progressText = document.getElementById('progressText');
+        const progressPercent = document.getElementById('progressPercent');
+        const progressDetails = document.getElementById('progressDetails');
+        
+        progressBar.style.width = `${percent}%`;
+        progressPercent.textContent = `${Math.round(percent)}%`;
+        progressText.textContent = "Scanning...";
+        progressDetails.textContent = message;
+      }
+    
+      /**
+       * Update step status indicator
+       */
+      updateStepStatus(elementId, status) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+        
+        element.textContent = status;
+        
+        // Apply appropriate styling
+        element.className = '';  // Reset class
+        
+        switch(status) {
+          case 'Waiting...':
+            element.classList.add('text-gray-500');
+            break;
+          case 'In Progress':
+            element.classList.add('text-primary-600', 'font-medium');
+            break;
+          case 'Complete':
+            element.classList.add('text-green-600', 'font-medium');
+            break;
+          case 'Error':
+            element.classList.add('text-red-600', 'font-medium');
+            break;
+          case 'Skipped':
+            element.classList.add('text-gray-400', 'italic');
+            break;
+        }
+      }
+    
+      /**
+       * Display analysis results in the UI
+       */
+      displayResults(results, file) {
+        // Show results dashboard
+        document.getElementById('resultsDashboard').classList.remove('hidden');
+        document.getElementById('downloadReport').classList.remove('hidden');
+        document.getElementById('downloadPdfReport').classList.remove('hidden');
+        
+        // Update threat score gauge
+        this.updateThreatGauge(results.stats.threatScore);
+        document.getElementById('threatLevel').textContent = results.stats.threatLevel;
+        
+        // Show critical alert if necessary
+        if (results.stats.criticalCount > 0) {
+          const criticalAlert = document.getElementById('criticalAlert');
+          criticalAlert.classList.remove('hidden');
+          document.getElementById('criticalAlertMessage').textContent = 
+            `This PDF contains ${results.stats.criticalCount} critical security issue(s) that may compromise system security.`;
+        } else {
+          document.getElementById('criticalAlert').classList.add('hidden');
+        }
+        
+        // Update quick stats
+        document.getElementById('quickStats').innerHTML = `
+          <div class="grid grid-cols-1 gap-2">
+            <div class="flex justify-between">
+              <span class="font-medium">File Name:</span>
+              <span class="text-gray-700">${file.name}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="font-medium">File Size:</span>
+              <span class="text-gray-700">${formatBytes(file.size)}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="font-medium">Pages:</span>
+              <span class="text-gray-700">${results.metadata.pageCount}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="font-medium">PDF Version:</span>
+              <span class="text-gray-700">${results.metadata.version}</span>
+            </div>
+            <div class="flex justify-between">
+              <span class="font-medium">Issue Count:</span>
+              <span class="text-gray-700">${results.stats.totalIssues}</span>
+            </div>
+            <div class="flex flex-col mt-2">
+              <span class="font-medium mb-1">Issue Severity:</span>
+              <div class="flex items-center justify-between text-xs mt-1">
+                <span class="text-red-600">Critical: ${results.stats.criticalCount}</span>
+                <span class="text-orange-600">High: ${results.stats.highCount}</span>
+                <span class="text-yellow-600">Medium: ${results.stats.mediumCount}</span>
+                <span class="text-blue-600">Low: ${results.stats.lowCount}</span>
+              </div>
+            </div>
+          </div>
+        `;
+        
+        // Update risk categories chart
+        this.updateRiskChart(results);
+        
+        // Display security findings
+        this.displaySecurityFindings(results);
+        
+        // Display PDF structure table
+        this.displayStructureTable(results);
+        
+        // Display object information
+        this.displayObjectsTable(results.deepAnnotations);
+        
+        // Display metadata
+        this.displayMetadata(results.metadata);
+        
+        // Set text content
+        document.getElementById('pdfText').value = results.text || "No text content available";
+        
+        // Display key insights if available
+        if (results.insights && results.insights.length > 0) {
+          this.displayInsights(results.insights);
+        }
+        
+        // Generate structure tree
+        this.generateStructureTree(results);
+        
+        // Display document actions
+        this.displayDocumentActions(results);
+      }
+    
+      /**
+       * Update the threat gauge visualization
+       */
+      updateThreatGauge(score) {
+        // Determine color based on score
+        let color;
+        if (score >= 80) color = '#ef4444';      // Red (critical)
+        else if (score >= 60) color = '#f97316'; // Orange (high)
+        else if (score >= 40) color = '#eab308'; // Yellow (medium)
+        else if (score >= 20) color = '#3b82f6'; // Blue (low)
+        else color = '#22c55e';                  // Green (safe)
+        
+        // Update SVG gauge
+        const gaugeValue = document.getElementById('gaugeValue');
+        const gaugeText = document.getElementById('gaugeText');
+        
+        // Calculate stroke-dashoffset (circumference is 2*PI*r = ~314 for r=50)
+        const circumference = 2 * Math.PI * 50;
+        const offset = circumference - (score / 100) * circumference;
+        
+        // Update gauge properties with animation
+        gaugeValue.style.stroke = color;
+        gaugeValue.style.strokeDasharray = circumference;
+        gaugeValue.style.strokeDashoffset = circumference; // Start at empty
+        
+        // Animate filling the gauge
+        setTimeout(() => {
+          gaugeValue.style.strokeDashoffset = offset;
+        }, 100);
+        
+        // Update text
+        gaugeText.textContent = score;
+        gaugeText.style.fill = color;
+      }
+    
+      /**
+       * Update the risk categories chart
+       */
+      // Update the updateRiskChart function with fixed height constraints
+updateRiskChart(results) {
+  const ctx = document.getElementById("riskChart").getContext("2d");
+  const labels = [];
+  const data = [];
+  const backgroundColors = [];
+  
+  // Colors for different categories
+  const categoryColors = {
+    javascript: 'rgba(239, 68, 68, 0.7)',
+    networkActivity: 'rgba(249, 115, 22, 0.7)',
+    // ... other colors remain the same
+  };
+  
+  // Get top categories with issues
+  const categories = Object.entries(results.security)
+    .map(([name, findings]) => {
+      const issueCount = findings.reduce((sum, f) => sum + f.matches, 0);
+      return { name, count: issueCount };
+    })
+    .filter(item => item.count > 0)
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 8); // Show top 8 categories for readability
+  
+  for (const category of categories) {
+    labels.push(formatCategoryName(category.name));
+    data.push(category.count);
+    backgroundColors.push(categoryColors[category.name] || 'rgba(107, 114, 128, 0.7)');
+  }
+  
+  // Destroy previous chart if it exists
+  if (window.riskChartInstance) { 
+    window.riskChartInstance.destroy(); 
+  }
+  
+  // Create new chart with fixed height
+  window.riskChartInstance = new Chart(ctx, {
+    type: "bar",
+    data: {
+      labels: labels,
+      datasets: [{
+        label: "Issues Found",
+        data: data,
+        backgroundColor: backgroundColors,
+        borderColor: backgroundColors.map(color => color.replace('0.7', '1')),
+        borderWidth: 1
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: true, // Changed to true
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(context) {
+              return `${context.raw} issue(s) found`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: { 
+          beginAtZero: true,
+          ticks: { precision: 0 }
+        },
+        y: {
+          ticks: { 
+            font: { size: 10 },
+            callback: function(val) {
+              const label = this.getLabelForValue(val);
+              return label.length > 15 ? label.substring(0, 12) + '...' : label;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+    
+      /**
+       * Display security findings in the UI
+       */
+      displaySecurityFindings(results) {
+        let securityHTML = '';
+        
+        // Process each category of findings
+        for (const [category, findings] of Object.entries(results.security)) {
+          if (findings.length > 0) {
+            const severityClasses = {
+              critical: 'bg-red-50 border-red-500 text-red-700',
+              high: 'bg-orange-50 border-orange-500 text-orange-700',
+              medium: 'bg-yellow-50 border-yellow-500 text-yellow-700',
+              low: 'bg-blue-50 border-blue-500 text-blue-700',
+              info: 'bg-gray-50 border-gray-300 text-gray-700'
+            };
+            
+            // Create collapsible section for each category
+            securityHTML += `
+              <div class="security-category mb-6" data-category="${category}">
+                <div class="flex justify-between items-center mb-3">
+                  <h3 class="text-lg font-semibold">${formatCategoryName(category)}</h3>
+                  <span class="text-sm text-gray-500">${findings.length} finding(s)</span>
+                </div>
+            `;
+            
+            // Sort findings by severity
+            const sortedFindings = [...findings].sort((a, b) => {
+              const severityOrder = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
+              return severityOrder[b.severity] - severityOrder[a.severity];
+            });
+            
+            // Create card for each finding
+            sortedFindings.forEach((finding, index) => {
+              securityHTML += `
+                <div class="security-finding mb-4 p-4 rounded-lg ${severityClasses[finding.severity] || 'border-gray-300'} border-l-4 shadow-sm" 
+                     data-severity="${finding.severity}">
+                  <div class="flex justify-between items-center">
+                    <div class="flex items-center">
+                      <span class="font-semibold uppercase text-sm">${finding.severity}</span>
+                      ${finding.severity === 'critical' ? 
+                        '<span class="ml-2 pulse-dot bg-red-500"></span>' : ''}
+                    </div>
+                    <span class="text-sm px-2 py-1 rounded bg-white bg-opacity-50">
+                      ${finding.matches} match(es)
+                    </span>
+                  </div>
+                  
+                  <div class="mt-2 text-sm">
+                    <div class="mb-1"><strong>Description:</strong> ${finding.description || "Pattern match"}</div>
+                    <div class="font-mono text-xs bg-white bg-opacity-60 p-2 mt-1 rounded overflow-x-auto">
+                      Pattern: ${escapeHtml(finding.pattern)}
+                    </div>
+                    <div class="text-xs text-gray-600 mt-1">Found in: ${escapeHtml(finding.source)}</div>
+                    
+                    ${finding.examples && finding.examples.length > 0 ? `
+                      <div class="mt-2 overflow-hidden">
+                        <button class="text-xs font-medium text-gray-700 hover:text-gray-900 flex items-center toggle-examples">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 toggle-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                          </svg>
+                          Show Examples
+                        </button>
+                        <div class="examples-container hidden mt-2">
+                          <div class="font-semibold text-xs">Examples:</div>
+                          <ul class="list-disc list-inside mt-1">
+                            ${finding.examples.map(ex => `
+                              <li class="break-all text-xs">${escapeHtml(ex)}</li>`).join('')}
+                          </ul>
+                        </div>
+                      </div>
+                    ` : ''}
+                  </div>
+                </div>
+              `;
+            });
+            
+            securityHTML += `</div>`;
+          }
+        }
+        
+        // Add raw scan findings
+        if (results.rawScanFindings && results.rawScanFindings.length > 0) {
+          securityHTML += `
+            <div class="security-category mb-6" data-category="rawScan">
+              <div class="flex justify-between items-center mb-3">
+                <h3 class="text-lg font-semibold">Raw Scan Findings</h3>
+                <span class="text-sm text-gray-500">${results.rawScanFindings.length} finding(s)</span>
+              </div>
+          `;
+          
+          results.rawScanFindings.forEach(finding => {
+            const severityClass = 
+              finding.severity === 'critical' ? 'bg-red-50 border-red-500 text-red-700' :
+              finding.severity === 'high' ? 'bg-orange-50 border-orange-500 text-orange-700' :
+              finding.severity === 'medium' ? 'bg-yellow-50 border-yellow-500 text-yellow-700' :
+              'bg-blue-50 border-blue-500 text-blue-700';
+            
+            securityHTML += `
+              <div class="security-finding mb-4 p-4 rounded-lg ${severityClass} border-l-4 shadow-sm" 
+                   data-severity="${finding.severity}">
+                <div class="flex justify-between items-center">
+                  <div class="flex items-center">
+                    <span class="font-semibold uppercase text-sm">${finding.severity}</span>
+                    ${finding.severity === 'critical' ? 
+                      '<span class="ml-2 pulse-dot bg-red-500"></span>' : ''}
+                  </div>
+                  <span class="text-sm px-2 py-1 rounded bg-white bg-opacity-50">
+                    Raw Scan
+                  </span>
+                </div>
+                
+                <div class="mt-2 text-sm">
+                  <div class="font-semibold">${finding.type}</div>
+                  <div class="mt-1">${finding.message}</div>
+                </div>
+              </div>
+            `;
+          });
+          
+          securityHTML += `</div>`;
+        }
+        
+        // Display results or empty state message
+        document.getElementById('securityResults').innerHTML = securityHTML || 
+          '<div class="text-green-600 text-center py-4 bg-green-50 rounded-lg">No security issues found</div>';
+        
+        // Set up toggle for examples
+        document.querySelectorAll('.toggle-examples').forEach(toggle => {
+          toggle.addEventListener('click', function() {
+            const container = this.nextElementSibling;
+            const icon = this.querySelector('.toggle-icon');
+            container.classList.toggle('hidden');
+            
+            if (container.classList.contains('hidden')) {
+              this.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 toggle-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+                Show Examples
+              `;
+            } else {
+              this.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1 toggle-icon" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7" />
+                </svg>
+                Hide Examples
+              `;
+            }
+          });
+        });
+      }
+    
+      /**
+       * Filter security results by severity
+       */
+      filterSecurityResults(severity) {
+        // Update active filter button
+        document.querySelectorAll('.severity-filter').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.severity === severity);
+        });
+        
+        // Filter findings
+        document.querySelectorAll('.security-finding').forEach(finding => {
+          if (severity === 'all' || finding.dataset.severity === severity) {
+            finding.classList.remove('hidden');
+          } else {
+            finding.classList.add('hidden');
+          }
+        });
+        
+        // Hide empty categories
+        document.querySelectorAll('.security-category').forEach(category => {
+          const visibleFindings = category.querySelectorAll('.security-finding:not(.hidden)');
+          if (visibleFindings.length === 0) {
+            category.classList.add('hidden');
+          } else {
+            category.classList.remove('hidden');
+          }
+        });
+      }
+    
+      /**
+       * Display PDF structure as a table
+       */
+      displayStructureTable(results) {
+        let structureHtml = "";
+        
+        if (results.structure && results.structure.pages && results.structure.pages.length > 0) {
+          structureHtml += `<table class="min-w-full border">
+            <thead>
+              <tr>
+                <th class="px-3 py-2 border bg-gray-50 text-left">Page</th>
+                <th class="px-3 py-2 border bg-gray-50 text-left">Size</th>
+                <th class="px-3 py-2 border bg-gray-50 text-left">Annotations</th>
+                <th class="px-3 py-2 border bg-gray-50 text-left">JavaScript</th>
+                <th class="px-3 py-2 border bg-gray-50 text-left">Links</th>
+                <th class="px-3 py-2 border bg-gray-50 text-left">Actions</th>
+              </tr>
+            </thead>
+            <tbody>`;
+            
+          results.structure.pages.forEach(page => {
+            const hasJSClass = page.hasJavaScript ? 'text-red-600 font-semibold' : '';
+            const hasActionsClass = page.hasActions ? 'text-orange-600 font-semibold' : '';
+            
+            structureHtml += `<tr>
+              <td class="px-3 py-2 border">${page.pageNumber}</td>
+              <td class="px-3 py-2 border">${page.width}×${page.height}</td>
+              <td class="px-3 py-2 border">${page.annotations}</td>
+              <td class="px-3 py-2 border ${hasJSClass}">${page.hasJavaScript ? "Yes" : "No"}</td>
+              <td class="px-3 py-2 border">${page.hasLinks ? "Yes" : "No"}</td>
+              <td class="px-3 py-2 border ${hasActionsClass}">
+                ${page.hasActions ? 
+                  `Yes (${page.actionTypes.join(', ')})` : 
+                  "No"}
+              </td>
+            </tr>`;
+          });
+          
+          structureHtml += `</tbody></table>`;
+        } else {
+          structureHtml = "<p class='text-gray-600 italic'>No structure information available.</p>";
+        }
+        
+        document.getElementById('pdfStructure').innerHTML = structureHtml;
+      }
+    
+      /**
+       * Display document actions
+       */
+      displayDocumentActions(results) {
+        const container = document.getElementById('documentActions');
+        
+        if (!results.structure || !results.structure.actions || results.structure.actions.length === 0) {
+          container.innerHTML = "<p class='text-gray-600 italic'>No document actions found.</p>";
+          return;
+        }
+        
+        let html = `<table class="min-w-full border">
+          <thead>
+            <tr>
+              <th class="px-3 py-2 border bg-gray-50 text-left">Location</th>
+              <th class="px-3 py-2 border bg-gray-50 text-left">Type</th>
+              <th class="px-3 py-2 border bg-gray-50 text-left">Subtype</th>
+              <th class="px-3 py-2 border bg-gray-50 text-left">Details</th>
+            </tr>
+          </thead>
+          <tbody>`;
+          
+        results.structure.actions.forEach(action => {
+          // Determine risk class based on action type
+          let riskClass = '';
+          if (action.type === 'JavaScript') {
+            riskClass = 'bg-red-50 text-red-800';
+          } else if (action.type === 'Launch') {
+            riskClass = 'bg-red-50 text-red-800';
+          } else if (action.type === 'URI') {
+            riskClass = 'bg-yellow-50 text-yellow-800';
+          }
+          
+          // Format location
+          const location = action.pageNumber ? `Page ${action.pageNumber}` : 'Document Level';
+          
+          // Format details
+          let details = '';
+          if (action.details) {
+            if (action.type === 'JavaScript' && action.details.script) {
+              details = `<pre class="text-xs overflow-x-auto max-h-24 p-1 bg-gray-50">${escapeHtml(action.details.script?.substring(0, 200))}${action.details.script?.length > 200 ? '...' : ''}</pre>`;
+            } else if (action.type === 'URI' && action.details.uri) {
+              details = `<span class="text-blue-600">${escapeHtml(action.details.uri)}</span>`;
+            } else if (action.type === 'Launch' && action.details.file) {
+              details = `File: <span class="font-semibold">${escapeHtml(action.details.file)}</span>`;
+            } else {
+              details = escapeHtml(JSON.stringify(action.details).substring(0, 100));
+            }
+          }
+          
+          html += `<tr class="${riskClass}">
+            <td class="px-3 py-2 border">${location}</td>
+            <td class="px-3 py-2 border font-medium">${action.type}</td>
+            <td class="px-3 py-2 border">${action.subtype || 'N/A'}</td>
+            <td class="px-3 py-2 border">${details}</td>
+          </tr>`;
+        });
+        
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+      }
+    
+      /**
+       * Generate a structure tree visualization
+       */
+      generateStructureTree(results) {
+        const container = document.getElementById('structureTree');
+        
+        if (!results.structure) {
+          container.innerHTML = "<p class='text-gray-600 italic'>No structure information available.</p>";
+          return;
+        }
+        
+        let html = '<ul class="space-y-2">';
+        
+        // Document catalog
+        html += `
+          <li>
+            <div class="flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-primary-600 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              </svg>
+              <span class="font-semibold">Document Catalog</span>
+            </div>
+            <ul class="ml-6 mt-1 space-y-1 border-l border-gray-200 pl-2">
+        `;
+        
+        // Add pages
+        html += `
+          <li>
+            <div class="flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-600 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+              </svg>
+              <span>Pages (${results.metadata.pageCount})</span>
+            </div>
+          </li>
+        `;
+        
+        // Add JavaScript if present
+        if (results.structure.javascriptActions && results.structure.javascriptActions.length > 0) {
+          html += `
+            <li>
+              <div class="flex items-center text-red-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span class="font-medium">JavaScript Actions (${results.structure.javascriptActions.length})</span>
+              </div>
+            </li>
+          `;
+        }
+        
+        // Add Outlines if present
+        if (results.structure.outlines && results.structure.outlines.length > 0) {
+          html += `
+            <li>
+              <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-600 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                </svg>
+                <span>Outlines (${results.structure.outlines.length})</span>
+              </div>
+            </li>
+          `;
+        }
+        
+        // Add AcroForm if present
+        if (results.structure.acroform) {
+          const formFieldsCount = results.structure.formFields?.length || 0;
+          html += `
+            <li>
+              <div class="flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-600 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <span>AcroForm (${formFieldsCount} fields)</span>
+              </div>
+            </li>
+          `;
+        }
+        
+        // Add XFA if present
+        if (results.structure.xfa) {
+          html += `
+            <li>
+              <div class="flex items-center text-orange-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span class="font-medium">XFA (XML Forms)</span>
+              </div>
+            </li>
+          `;
+        }
+        
+        // Add embedded files if present
+        if (results.structure.embeddedFiles && results.structure.embeddedFiles.length > 0) {
+          html += `
+            <li>
+              <div class="flex items-center text-orange-600">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+                <span class="font-medium">Embedded Files (${results.structure.embeddedFiles.length})</span>
+              </div>
+            </li>
+          `;
+        }
+        
+        // Close lists
+        html += `
+            </ul>
+          </li>
+        </ul>`;
+        
+        container.innerHTML = html;
+      }
+    
+      /**
+       /**
+       * Display objects table with filtering
+       */
+      displayObjectsTable(objects) {
+        const container = document.getElementById('objectTable');
+        
+        if (!objects || objects.length === 0) {
+          container.innerHTML = "<p class='text-gray-600 italic'>No objects found.</p>";
+          return;
+        }
+        
+        // Store objects for filtering
+        this.objectsCache = objects;
+        
+        let html = `<table class="min-w-full border">
+          <thead>
+            <tr>
+              <th class="px-3 py-2 border bg-gray-50 text-left">Page</th>
+              <th class="px-3 py-2 border bg-gray-50 text-left">Type</th>
+              <th class="px-3 py-2 border bg-gray-50 text-left">Details</th>
+              <th class="px-3 py-2 border bg-gray-50 text-left">Risk</th>
+            </tr>
+          </thead>
+          <tbody>`;
+          
+        objects.forEach(obj => {
+          // Determine if this object is risky
+          let riskLevel = 'Low';
+          let riskClass = 'text-blue-600';
+          
+          if (obj.danger) {
+            riskLevel = obj.danger.includes('JavaScript') ? 'Critical' : 'High';
+            riskClass = obj.danger.includes('JavaScript') ? 'text-red-600 font-bold' : 'text-orange-600 font-semibold';
+          } else if (obj.actions && (
+              obj.actions.includes('JavaScript') || 
+              obj.actions.includes('Launch') || 
+              obj.actions.includes('URI')
+            )) {
+            riskLevel = 'Medium';
+            riskClass = 'text-yellow-600';
+          }
+          
+          // Format details
+          let details = '';
+          if (obj.url) details += `URL: ${escapeHtml(obj.url)}<br>`;
+          if (obj.fieldName) details += `Field: ${escapeHtml(obj.fieldName)}<br>`;
+          if (obj.contents) details += `Content: ${escapeHtml(obj.contents.substring(0, 100))}${obj.contents.length > 100 ? '...' : ''}<br>`;
+          if (obj.script) details += `<pre class="text-xs overflow-x-auto max-h-24 p-1 bg-gray-50">${escapeHtml(obj.script.substring(0, 200))}${obj.script.length > 200 ? '...' : ''}</pre>`;
+          
+          html += `<tr data-type="${obj.subtype.toLowerCase()}" data-risk="${riskLevel.toLowerCase()}">
+            <td class="px-3 py-2 border">${obj.page}</td>
+            <td class="px-3 py-2 border">${obj.subtype}</td>
+            <td class="px-3 py-2 border">${details || 'N/A'}</td>
+            <td class="px-3 py-2 border ${riskClass}">${riskLevel}</td>
+          </tr>`;
+        });
+        
+        html += `</tbody></table>`;
+        container.innerHTML = html;
+      }
+    
+      /**
+       * Filter objects in the objects table
+       */
+      filterObjects(searchText, typeFilter) {
+        if (!this.objectsCache) return;
+        
+        const objects = this.objectsCache.filter(obj => {
+          // Apply type filter
+          if (typeFilter !== 'all') {
+            let matchesType = false;
+            
+            switch(typeFilter) {
+              case 'annotation':
+                matchesType = true; // All are annotations
+                break;
+              case 'action':
+                matchesType = obj.actions !== null && obj.actions !== undefined;
+                break;
+              case 'javascript':
+                matchesType = obj.script || (obj.actions && obj.actions.includes('JavaScript'));
+                break;
+              case 'form':
+                matchesType = obj.fieldName && obj.fieldName.length > 0;
+                break;
+            }
+            
+            if (!matchesType) return false;
+          }
+          
+          // Apply search filter if present
+          if (searchText && searchText.length > 0) {
+            const searchLower = searchText.toLowerCase();
+            return (
+              (obj.subtype && obj.subtype.toLowerCase().includes(searchLower)) ||
+              (obj.fieldName && obj.fieldName.toLowerCase().includes(searchLower)) ||
+              (obj.url && obj.url.toLowerCase().includes(searchLower)) ||
+              (obj.contents && obj.contents.toLowerCase().includes(searchLower)) ||
+              (obj.script && obj.script.toLowerCase().includes(searchLower))
+            );
+          }
+          
+          return true;
+        });
+        
+        this.displayObjectsTable(objects);
+      }
+    
+      /**
+       * Display metadata in a formatted way
+       */
+      displayMetadata(metadata) {
+        // Document info
+        const metadataInfoElement = document.getElementById('metadataInfo');
+        if (!metadataInfoElement) return;
+        
+        let infoHtml = '<div class="grid grid-cols-1 gap-2">';
+        
+        // Basic metadata
+        const basicInfo = {
+          'PDF Version': metadata.version || 'Unknown',
+          'Pages': metadata.pageCount || 0,
+          'File Size': metadata.fileSize ? formatBytes(metadata.fileSize) : 'Unknown',
+          'Encrypted': metadata.encrypted ? 'Yes' : 'No',
+          'Linearized': metadata.linearized ? 'Yes' : 'No'
+        };
+        
+        for (const [key, value] of Object.entries(basicInfo)) {
+          infoHtml += `
+            <div class="flex justify-between border-b pb-1">
+              <span class="font-medium">${key}:</span>
+              <span class="text-gray-700">${value}</span>
+            </div>
+          `;
+        }
+        
+        // Document info dictionary
+        if (metadata.info) {
+          for (const [key, value] of Object.entries(metadata.info)) {
+            if (value && value.toString().trim().length > 0) {
+              infoHtml += `
+                <div class="flex justify-between border-b pb-1">
+                  <span class="font-medium">${key}:</span>
+                  <span class="text-gray-700 break-all">${value}</span>
+                </div>
+              `;
+            }
+          }
+        }
+        
+        infoHtml += '</div>';
+        metadataInfoElement.innerHTML = infoHtml;
+        
+        // XMP metadata
+        const xmpMetadataElement = document.getElementById('xmpMetadata');
+        if (!xmpMetadataElement) return;
+        
+        if (metadata.xmp && Object.keys(metadata.xmp).length > 0) {
+          let xmpHtml = '<div class="grid grid-cols-1 gap-2">';
+          
+          for (const [key, value] of Object.entries(metadata.xmp)) {
+            if (value && value.toString().trim().length > 0) {
+              xmpHtml += `
+                <div class="flex flex-col border-b pb-1">
+                  <span class="font-medium">${key}:</span>
+                  <span class="text-gray-700 break-all text-xs mt-1">${value}</span>
+                </div>
+              `;
+            }
+          }
+          
+          xmpHtml += '</div>';
+          xmpMetadataElement.innerHTML = xmpHtml;
+        } else {
+          xmpMetadataElement.innerHTML = '<p class="text-gray-600 italic">No XMP metadata available.</p>';
+        }
+        
+        // Raw metadata
+        const rawMetadataElement = document.getElementById('rawMetadata');
+        if (!rawMetadataElement) return;
+        
+        rawMetadataElement.innerHTML = `<pre>${JSON.stringify(metadata, null, 2)}</pre>`;
+      }
+    
+      /**
+       * Display insights based on findings
+       */
+      displayInsights(insights) {
+        const container = document.getElementById('keyInsights');
+        const insightsContainer = document.getElementById('insightsContainer');
+        
+        if (!insights || insights.length === 0) {
+          container.classList.add('hidden');
+          return;
+        }
+        
+        // Show container
+        container.classList.remove('hidden');
+        
+        // Generate HTML for each insight
+        let html = '';
+        insights.forEach(insight => {
+          const severityColors = {
+            critical: 'border-red-400 bg-red-50',
+            high: 'border-orange-400 bg-orange-50',
+            medium: 'border-yellow-400 bg-yellow-50',
+            low: 'border-blue-400 bg-blue-50'
+          };
+          
+          const severityColor = severityColors[insight.severity] || 'border-gray-400 bg-gray-50';
+          
+          html += `
+            <div class="insight-card p-4 rounded-lg shadow-sm border-l-4 ${severityColor}">
+              <h3 class="font-bold text-gray-900 mb-1 flex items-center">
+                ${insight.severity === 'critical' ? 
+                  '<span class="mr-1 pulse-dot bg-red-500"></span>' : 
+                  ''}
+                ${insight.title}
+              </h3>
+              <p class="text-sm text-gray-600 mb-2">${insight.description}</p>
+              <div class="text-xs border-t border-gray-200 pt-2 font-medium">
+                <span class="text-gray-700">Recommendation:</span> ${insight.recommendation}
+              </div>
+            </div>
+          `;
+        });
+        
+        insightsContainer.innerHTML = html;
+      }
+    
+      /**
+       * Load PDF preview
+       */
+      async loadPDFPreview(arrayBuffer) {
+        try {
+          // Load the PDF
+          const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+          this.pdfInstance = await loadingTask.promise;
+          
+          // Update page info
+          this.currentPage = 1;
+          document.getElementById('pageInfo').textContent = `Page 1 of ${this.pdfInstance.numPages}`;
+          
+          // Render first page
+          this.renderPage(this.currentPage);
+        } catch (error) {
+          console.error('Error loading PDF preview:', error);
+          document.getElementById('pdfPreviewArea').innerHTML = 
+            '<div class="p-4 text-red-600 bg-red-50 rounded-lg">Failed to render PDF preview. The file may be damaged or encrypted.</div>';
+        }
+      }
+    
+      /**
+       * Render a PDF page in the preview area
+       */
+      async renderPage(pageNumber) {
+        if (!this.pdfInstance) return;
+        
+        try {
+          const container = document.getElementById('pdfPreviewArea');
+          container.innerHTML = '<div class="flex justify-center p-4"><div class="loading"></div></div>';
+          
+          // Get the page
+          const page = await this.pdfInstance.getPage(pageNumber);
+          
+          // Calculate scale to fit container while maintaining aspect ratio
+          const viewport = page.getViewport({ scale: this.zoomLevel });
+          
+          // Create canvas
+          const canvas = document.createElement('canvas');
+          const context = canvas.getContext('2d');
+          canvas.height = viewport.height;
+          canvas.width = viewport.width;
+          
+          // Clear container and add canvas
+          container.innerHTML = '';
+          container.appendChild(canvas);
+          
+          // Render the page
+          await page.render({
+            canvasContext: context,
+            viewport: viewport
+          }).promise;
+          
+          // Update page info
+          document.getElementById('pageInfo').textContent = `Page ${pageNumber} of ${this.pdfInstance.numPages}`;
+        } catch (error) {
+          console.error('Error rendering page:', error);
+          document.getElementById('pdfPreviewArea').innerHTML = 
+            '<div class="p-4 text-red-600 bg-red-50 rounded-lg">Failed to render page.</div>';
+        }
+      }
+    
+      /**
+       * Generate JSON report
+       */
+      generateJSONReport(results) {
+        if (!results) {
+          this.showNotification('No results available for export', 'warning');
+          return;
+        }
+        
+        const report = { 
+          timestamp: new Date().toISOString(), 
+          results: { ...results },
+          generator: "Advanced PDF Security Scanner Pro v2.5"
+        };
+        
+        // Create and download the file
+        const blob = new Blob([JSON.stringify(report, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `pdf-security-report-${new Date().getTime()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        
+        this.showNotification('Report saved successfully', 'success');
+      }
+    
+      /**
+       * Generate PDF report
+       */
+      async generatePDFReport(results) {
+        if (!results) {
+          this.showNotification('No results available for export', 'warning');
+          return;
+        }
+        
+        try {
+          // Show loading notification
+          this.showNotification('Generating PDF report...', 'info');
+          
+          // Create report HTML content
+          const reportContainer = document.createElement('div');
+          reportContainer.className = 'pdf-report-container';
+          reportContainer.style.width = '800px';
+          reportContainer.style.padding = '40px';
+          reportContainer.style.fontFamily = 'Arial, sans-serif';
+          
+          // Add report content
+          reportContainer.innerHTML = `
+            <div style="text-align: center; margin-bottom: 20px;">
+              <h1 style="color: #0284c7; margin-bottom: 5px;">PDF Security Analysis Report</h1>
+              <p style="color: #64748b; margin-top: 0;">Generated ${new Date().toLocaleString()}</p>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+              <h2 style="color: #0284c7; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">File Information</h2>
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 5px; font-weight: bold; width: 200px;">File Name:</td>
+                  <td style="padding: 5px;">${results.metadata.info?.Title || 'Unknown'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 5px; font-weight: bold;">File Size:</td>
+                  <td style="padding: 5px;">${formatBytes(results.metadata.fileSize || 0)}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 5px; font-weight: bold;">PDF Version:</td>
+                  <td style="padding: 5px;">${results.metadata.version || 'Unknown'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 5px; font-weight: bold;">Page Count:</td>
+                  <td style="padding: 5px;">${results.metadata.pageCount || 0}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 5px; font-weight: bold;">Creator:</td>
+                  <td style="padding: 5px;">${results.metadata.info?.Creator || 'Unknown'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 5px; font-weight: bold;">Producer:</td>
+                  <td style="padding: 5px;">${results.metadata.info?.Producer || 'Unknown'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 5px; font-weight: bold;">Creation Date:</td>
+                  <td style="padding: 5px;">${results.metadata.info?.CreationDate || 'Unknown'}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 5px; font-weight: bold;">File Hash (SHA-256):</td>
+                  <td style="padding: 5px; font-family: monospace; font-size: 12px; word-break: break-all;">${results.fileHash || 'Unknown'}</td>
+                </tr>
+              </table>
+            </div>
+            
+            <div style="margin-bottom: 20px;">
+              <h2 style="color: #0284c7; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">Security Summary</h2>
+              <div style="display: flex; margin-bottom: 15px;">
+                <div style="flex: 1; text-align: center; padding: 10px; background-color: ${
+                  results.stats.threatScore >= 80 ? '#fee2e2' : 
+                  results.stats.threatScore >= 60 ? '#ffedd5' : 
+                  results.stats.threatScore >= 40 ? '#fef9c3' : 
+                  results.stats.threatScore >= 20 ? '#dbeafe' : '#dcfce7'
+                }; border-radius: 8px;">
+                  <div style="font-size: 36px; font-weight: bold; color: ${
+                    results.stats.threatScore >= 80 ? '#b91c1c' : 
+                    results.stats.threatScore >= 60 ? '#c2410c' : 
+                    results.stats.threatScore >= 40 ? '#a16207' : 
+                    results.stats.threatScore >= 20 ? '#1d4ed8' : '#15803d'
+                  };">${results.stats.threatScore}</div>
+                  <div style="font-weight: bold; margin-top: 5px;">Threat Score</div>
+                  <div style="font-size: 12px; margin-top: 2px;">${results.stats.threatLevel} Risk</div>
+                </div>
+                <div style="flex: 2; margin-left: 15px;">
+                  <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                      <td style="padding: 5px; font-weight: bold; width: 140px;">Critical Issues:</td>
+                      <td style="padding: 5px; color: #b91c1c;">${results.stats.criticalCount || 0}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 5px; font-weight: bold;">High Issues:</td>
+                      <td style="padding: 5px; color: #c2410c;">${results.stats.highCount || 0}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 5px; font-weight: bold;">Medium Issues:</td>
+                      <td style="padding: 5px; color: #a16207;">${results.stats.mediumCount || 0}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 5px; font-weight: bold;">Low Issues:</td>
+                      <td style="padding: 5px; color: #1d4ed8;">${results.stats.lowCount || 0}</td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 5px; font-weight: bold;">Total Issues:</td>
+                      <td style="padding: 5px; font-weight: bold;">${results.stats.totalIssues || 0}</td>
+                    </tr>
+                  </table>
+                </div>
+              </div>
+            </div>
+          `;
+          
+          // Add key insights if available
+          if (results.insights && results.insights.length > 0) {
+            let insightsHtml = `
+              <div style="margin-bottom: 20px;">
+                <h2 style="color: #0284c7; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">Key Insights</h2>
+                <ul style="margin-top: 10px; padding-left: 20px;">
+            `;
+            
+            results.insights.forEach(insight => {
+              const severityColor = 
+                insight.severity === 'critical' ? '#b91c1c' : 
+                insight.severity === 'high' ? '#c2410c' : 
+                insight.severity === 'medium' ? '#a16207' : '#1d4ed8';
+              
+              insightsHtml += `
+                <li style="margin-bottom: 10px;">
+                  <div style="font-weight: bold; color: ${severityColor};">${insight.title}</div>
+                  <div style="margin-top: 3px;">${insight.description}</div>
+                  <div style="margin-top: 3px; font-style: italic; font-size: 13px;">
+                    <strong>Recommendation:</strong> ${insight.recommendation}
+                  </div>
+                </li>
+              `;
+            });
+            
+            insightsHtml += `</ul></div>`;
+            reportContainer.innerHTML += insightsHtml;
+          }
+          
+          // Add top security findings
+          let securityHtml = `
+            <div style="margin-bottom: 20px;">
+              <h2 style="color: #0284c7; border-bottom: 1px solid #e2e8f0; padding-bottom: 5px;">Top Security Findings</h2>
+          `;
+          
+          // Create flattened list of all findings
+          const allFindings = [];
+          
+          for (const [category, findings] of Object.entries(results.security)) {
+            findings.forEach(finding => {
+              allFindings.push({
+                category: formatCategoryName(category),
+                ...finding
+              });
+            });
+          }
+          
+          // Add raw scan findings
+          if (results.rawScanFindings && results.rawScanFindings.length > 0) {
+            results.rawScanFindings.forEach(finding => {
+              allFindings.push({
+                category: 'Raw Scan',
+                severity: finding.severity,
+                description: finding.message,
+                type: finding.type,
+                matches: 1
+              });
+            });
+          }
+          
+          // Sort by severity
+          const sortedFindings = allFindings.sort((a, b) => {
+            const severityOrder = { critical: 4, high: 3, medium: 2, low: 1, info: 0 };
+            return severityOrder[b.severity] - severityOrder[a.severity];
+          }).slice(0, 10); // Top 10 findings
+          
+          if (sortedFindings.length > 0) {
+            securityHtml += `
+              <table style="width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px;">
+                <tr style="background-color: #f1f5f9;">
+                  <th style="padding: 8px; text-align: left; border: 1px solid #e2e8f0;">Severity</th>
+                  <th style="padding: 8px; text-align: left; border: 1px solid #e2e8f0;">Category</th>
+                  <th style="padding: 8px; text-align: left; border: 1px solid #e2e8f0;">Description</th>
+                  <th style="padding: 8px; text-align: right; border: 1px solid #e2e8f0;">Count</th>
+                </tr>
+            `;
+            
+            sortedFindings.forEach(finding => {
+              const severityColor = 
+                finding.severity === 'critical' ? '#b91c1c' : 
+                finding.severity === 'high' ? '#c2410c' : 
+                finding.severity === 'medium' ? '#a16207' : 
+                finding.severity === 'low' ? '#1d4ed8' : '#64748b';
+              
+              securityHtml += `
+                <tr>
+                  <td style="padding: 8px; border: 1px solid #e2e8f0; font-weight: bold; color: ${severityColor};">
+                    ${finding.severity.toUpperCase()}
+                  </td>
+                  <td style="padding: 8px; border: 1px solid #e2e8f0;">${finding.category}</td>
+                  <td style="padding: 8px; border: 1px solid #e2e8f0;">${finding.description || finding.type || 'Pattern match'}</td>
+                  <td style="padding: 8px; border: 1px solid #e2e8f0; text-align: right;">${finding.matches || 1}</td>
+                </tr>
+              `;
+            });
+            
+            securityHtml += `</table>`;
+          } else {
+            securityHtml += `<p style="margin-top: 10px; color: #16a34a;">No security issues found.</p>`;
+          }
+          
+          securityHtml += `</div>`;
+          reportContainer.innerHTML += securityHtml;
+          
+          // Add footer
+          reportContainer.innerHTML += `
+            <div style="margin-top: 40px; text-align: center; color: #64748b; font-size: 12px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+              <p>Generated by Advanced PDF Security Scanner Pro v2.5</p>
+              <p>Report date: ${new Date().toLocaleString()}</p>
+            </div>
+          `;
+          
+          // Add container to document for rendering
+          document.body.appendChild(reportContainer);
+          
+          // Generate PDF using html2canvas and jspdf
+          const canvas = await html2canvas(reportContainer, { scale: 1.5 });
+          document.body.removeChild(reportContainer);
+          
+          const imgData = canvas.toDataURL('image/png');
+          const pdf = new jspdf.jsPDF('p', 'mm', 'a4');
+          
+          // Calculate dimensions
+          const imgWidth = 210;  // A4 width in mm
+          const pageHeight = 297; // A4 height in mm
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          let heightLeft = imgHeight;
+          let position = 0;
+          
+          // Add first page
+          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+          
+          // Add additional pages if needed
+          while (heightLeft > 0) {
+            position = heightLeft - imgHeight;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+            heightLeft -= pageHeight;
+          }
+          
+          // Save the PDF
+          pdf.save(`pdf-security-report-${new Date().getTime()}.pdf`);
+          
+          this.showNotification('PDF report generated successfully', 'success');
+        } catch (error) {
+          console.error('Error generating PDF report:', error);
+          this.showNotification('Failed to generate PDF report', 'error');
+        }
+      }
+    
+      /**
+       * Show a notification to the user
+       */
+      showNotification(message, type = 'info') {
+        // Create notification container if it doesn't exist
+        let container = document.getElementById('notification-container');
+        if (!container) {
+          container = document.createElement('div');
+          container.id = 'notification-container';
+          container.style.position = 'fixed';
+          container.style.top = '20px';
+          container.style.right = '20px';
+          container.style.zIndex = '9999';
+          document.body.appendChild(container);
+        }
+        
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = 'notification flex items-center p-4 mb-4 rounded-lg shadow-md transition-opacity duration-500';
+        
+        // Set appearance based on type
+        switch(type) {
+          case 'success':
+            notification.classList.add('bg-green-100', 'text-green-800');
+            notification.innerHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            `;
+            break;
+          case 'warning':
+            notification.classList.add('bg-yellow-100', 'text-yellow-800');
+            notification.innerHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            `;
+            break;
+          case 'error':
+            notification.classList.add('bg-red-100', 'text-red-800');
+            notification.innerHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            `;
+            break;
+          default: // info
+            notification.classList.add('bg-blue-100', 'text-blue-800');
+            notification.innerHTML = `
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            `;
+        }
+        
+        // Add message
+        notification.innerHTML += `<span>${message}</span>`;
+        
+        // Add to container
+        container.appendChild(notification);
+        
+        // Remove after 4 seconds
+        setTimeout(() => {
+          notification.style.opacity = '0';
+          setTimeout(() => {
+            container.removeChild(notification);
+          }, 500);
+        }, 4000);
+      }
+    
+      /**
+       * Switch between tabs
+       */
+      switchTab(tabId) {
+        // Update active tab button
+        document.querySelectorAll('.tab-button').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.tab === tabId);
+        });
+        
+        // Show selected tab content
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.toggle('hidden', content.id !== `${tabId}Tab`);
+        });
+      }
+    }
+    
+    // Initialize UI handler
+    const ui = new UIHandler();
+  </script>
+</body>
+</html>
