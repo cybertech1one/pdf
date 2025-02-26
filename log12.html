@@ -1,0 +1,2995 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-gray-50">
+<head>
+  <meta charset="UTF-8">
+  <title>LogSentinel - Advanced Log Analysis</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.4.3/dist/echarts.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/moment@2.29.4/moment.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  <style>
+    :root {
+      --primary: #3b82f6;
+      --primary-light: #dbeafe;
+      --primary-dark: #1e40af;
+      --secondary: #0f172a;
+      --danger: #dc2626;
+      --warning: #f59e0b;
+      --success: #16a34a;
+      --info: #0ea5e9;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 3px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 3px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    .dropzone {
+      border: 2px dashed #e2e8f0;
+      transition: all 0.3s ease;
+    }
+    .dropzone.dragover {
+      border-color: var(--primary);
+      background: rgba(59, 130, 246, 0.05);
+    }
+    .spin {
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    .fade-in {
+      animation: fadeIn 0.3s ease-in-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .tab-btn {
+      position: relative;
+      transition: all 0.2s;
+      border-bottom: 2px solid transparent;
+    }
+    .tab-btn.active {
+      border-bottom: 2px solid var(--primary);
+      color: var(--primary);
+    }
+    .tab-btn:hover:not(.active) {
+      border-bottom: 2px solid #e2e8f0;
+    }
+    .notification {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 50;
+      padding: 16px;
+      border-radius: 6px;
+      max-width: 350px;
+      animation: slideIn 0.3s ease-out, fadeOut 0.5s ease-in 3.5s forwards;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes fadeOut {
+      from { opacity: 1; }
+      to { opacity: 0; visibility: hidden; }
+    }
+    .zoom-on-hover {
+      transition: transform 0.2s ease;
+    }
+    .zoom-on-hover:hover {
+      transform: scale(1.02);
+    }
+    .finding-card {
+      border-left-width: 4px;
+      transition: all 0.2s ease;
+    }
+    .finding-card:hover {
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+  </style>
+</head>
+<body class="h-full antialiased text-gray-800">
+  <div class="min-h-full">
+    <!-- Header -->
+    <header class="bg-white shadow">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+        <div class="flex items-center">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900">LogSentinel</h1>
+            <p class="text-sm text-gray-500">Advanced Log Analysis Tool</p>
+          </div>
+        </div>
+        <div>
+          <span class="inline-flex rounded-md shadow-sm">
+            <button id="helpBtn" type="button" class="inline-flex items-center px-3 py-2 border border-gray-300 text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              Help
+            </button>
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column: Upload and Controls -->
+        <div class="lg:col-span-1">
+          <!-- Upload Box -->
+          <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Upload Log File</h2>
+            <div id="dropZone" class="dropzone rounded-lg p-6 text-center cursor-pointer">
+              <svg xmlns="http://www.w3.org/2000/svg" class="mx-auto h-12 w-12 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+              <p class="mt-2 text-sm text-gray-600">Drag and drop your log file here, or</p>
+              <input id="logInput" type="file" accept=".log,.txt,.csv" class="hidden">
+              <button id="browseBtn" class="mt-2 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                Browse Files
+              </button>
+            </div>
+            <div id="fileDetails" class="hidden mt-4 p-3 bg-gray-50 rounded-md">
+              <div id="fileName" class="font-medium text-gray-900"></div>
+              <div id="fileSize" class="text-sm text-gray-500"></div>
+            </div>
+          </div>
+          
+          <!-- Analysis Options -->
+          <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Analysis Options</h2>
+            <div class="space-y-4">
+              <div>
+                <label for="logFormat" class="block text-sm font-medium text-gray-700 mb-1">Log Format</label>
+                <select id="logFormat" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                  <option value="auto">Auto-detect</option>
+                  <option value="apache">Apache</option>
+                  <option value="nginx">Nginx</option>
+                  <option value="iis">IIS</option>
+                  <option value="aws">AWS CloudTrail</option>
+                  <option value="syslog">Syslog</option>
+                  <option value="csv">CSV</option>
+                  <option value="json">JSON</option>
+                  <option value="custom">Custom</option>
+                </select>
+              </div>
+              
+              <div id="customFormatContainer" class="hidden">
+                <label for="customFormat" class="block text-sm font-medium text-gray-700 mb-1">Custom Format Pattern</label>
+                <input type="text" id="customFormat" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="%h %l %u %t &quot;%r&quot; %>s %b">
+                <p class="mt-1 text-xs text-gray-500">Use Apache log format specifiers</p>
+              </div>
+              
+              <div>
+                <label for="timeRange" class="block text-sm font-medium text-gray-700 mb-1">Time Range</label>
+                <select id="timeRange" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md">
+                  <option value="all">All Time</option>
+                  <option value="day">Last 24 Hours</option>
+                  <option value="week">Last 7 Days</option>
+                  <option value="month">Last 30 Days</option>
+                  <option value="custom">Custom Range</option>
+                </select>
+              </div>
+              
+              <div id="customTimeContainer" class="hidden space-y-2">
+                <div>
+                  <label for="startTime" class="block text-sm font-medium text-gray-700 mb-1">Start Time</label>
+                  <input type="datetime-local" id="startTime" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+                <div>
+                  <label for="endTime" class="block text-sm font-medium text-gray-700 mb-1">End Time</label>
+                  <input type="datetime-local" id="endTime" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                </div>
+              </div>
+              
+              <div class="space-y-2">
+                <div class="flex items-center">
+                  <input id="detectScanningActivity" type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" checked>
+                  <label for="detectScanningActivity" class="ml-2 block text-sm text-gray-700">Detect scanning activity</label>
+                </div>
+                <div class="flex items-center">
+                  <input id="detectAuthFailures" type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" checked>
+                  <label for="detectAuthFailures" class="ml-2 block text-sm text-gray-700">Detect authentication failures</label>
+                </div>
+                <div class="flex items-center">
+                  <input id="detectAttackPatterns" type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" checked>
+                  <label for="detectAttackPatterns" class="ml-2 block text-sm text-gray-700">Detect attack patterns</label>
+                </div>
+                <div class="flex items-center">
+                  <input id="detectAnomalies" type="checkbox" class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded" checked>
+                  <label for="detectAnomalies" class="ml-2 block text-sm text-gray-700">Detect anomalies</label>
+                </div>
+              </div>
+            </div>
+            <div class="mt-5">
+              <button id="analyzeBtn" class="w-full inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                Start Analysis
+              </button>
+            </div>
+          </div>
+          
+          <!-- Export Options -->
+          <div class="bg-white rounded-lg shadow-sm p-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Export Options</h2>
+            <div class="space-y-3">
+              <button id="downloadJSON" class="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+                Export Results (JSON)
+              </button>
+              <button id="downloadCSV" class="w-full inline-flex items-center justify-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <svg xmlns="http://www.w3.org/2000/svg" class="mr-2 h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Export Results (CSV)
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Right Column: Results -->
+        <div class="lg:col-span-2">
+          <!-- Progress Indicator (initially hidden) -->
+          <div id="progressContainer" class="hidden bg-white rounded-lg shadow-sm p-6 mb-6">
+            <h2 class="text-lg font-medium text-gray-900 mb-4">Analysis in Progress</h2>
+            <div class="mb-2 flex justify-between items-center">
+              <span id="progressText" class="text-sm font-medium text-gray-700">Reading file...</span>
+              <span id="progressPercent" class="text-sm font-medium text-gray-700">0%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+              <div id="progressBar" class="bg-blue-600 h-2 rounded-full transition-all" style="width: 0%"></div>
+            </div>
+            
+            <div class="mt-4 grid grid-cols-2 gap-4">
+              <div class="border border-gray-200 rounded-md p-3">
+                <div class="text-sm font-medium text-gray-500">Lines Processed</div>
+                <div id="linesProcessed" class="mt-1 text-2xl font-semibold text-gray-900">0</div>
+              </div>
+              <div class="border border-gray-200 rounded-md p-3">
+                <div class="text-sm font-medium text-gray-500">Issues Found</div>
+                <div id="issuesFound" class="mt-1 text-2xl font-semibold text-gray-900">0</div>
+              </div>
+            </div>
+            
+            <div class="mt-4 text-sm text-gray-500">
+              <p>Large log files are processed in chunks to ensure browser stability. Please be patient.</p>
+            </div>
+          </div>
+          
+          <!-- Results Dashboard (initially hidden) -->
+          <div id="resultsDashboard" class="hidden">
+            <!-- Results Summary -->
+            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+              <h2 class="text-lg font-medium text-gray-900 mb-4">Analysis Summary</h2>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-blue-50 rounded-md p-4 border border-blue-100">
+                  <div class="text-sm font-medium text-blue-800">Total Entries</div>
+                  <div id="totalEntries" class="mt-1 text-2xl font-semibold text-blue-900">0</div>
+                </div>
+                <div class="bg-red-50 rounded-md p-4 border border-red-100">
+                  <div class="text-sm font-medium text-red-800">Critical Events</div>
+                  <div id="criticalEvents" class="mt-1 text-2xl font-semibold text-red-900">0</div>
+                </div>
+                <div class="bg-yellow-50 rounded-md p-4 border border-yellow-100">
+                  <div class="text-sm font-medium text-yellow-800">Warnings</div>
+                  <div id="warningEvents" class="mt-1 text-2xl font-semibold text-yellow-900">0</div>
+                </div>
+                <div class="bg-green-50 rounded-md p-4 border border-green-100">
+                  <div class="text-sm font-medium text-green-800">Unique IPs</div>
+                  <div id="uniqueIPs" class="mt-1 text-2xl font-semibold text-green-900">0</div>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Time Distribution Chart -->
+            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+              <h2 class="text-lg font-medium text-gray-900 mb-4">Activity Timeline</h2>
+              <div id="timelineChart" class="h-64"></div>
+            </div>
+            
+            <!-- Tabs Navigation -->
+            <div class="bg-white rounded-lg shadow-sm mb-6">
+              <div class="border-b border-gray-200">
+                <nav class="flex -mb-px">
+                  <button class="tab-btn active px-4 py-3 text-sm font-medium text-center flex-1" data-tab="events">
+                    Security Events
+                  </button>
+                  <button class="tab-btn px-4 py-3 text-sm font-medium text-center flex-1" data-tab="ips">
+                    IP Analysis
+                  </button>
+                  <button class="tab-btn px-4 py-3 text-sm font-medium text-center flex-1" data-tab="users">
+                    User Activity
+                  </button>
+                  <button class="tab-btn px-4 py-3 text-sm font-medium text-center flex-1" data-tab="traffic">
+                    Traffic Patterns
+                  </button>
+                  <button class="tab-btn px-4 py-3 text-sm font-medium text-center flex-1" data-tab="logs">
+                    Log Viewer
+                  </button>
+                </nav>
+              </div>
+              
+              <!-- Tab Content -->
+              <div class="p-6">
+                <!-- Security Events Tab -->
+                <div id="eventsTab" class="tab-content">
+                  <!-- Filter controls -->
+                  <div class="mb-6 flex flex-wrap items-center gap-3">
+                    <span class="text-sm font-medium text-gray-700">Filter:</span>
+                    <div class="flex flex-wrap gap-2">
+                      <button class="severity-filter px-3 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-800 active" data-severity="all">All</button>
+                      <button class="severity-filter px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800" data-severity="critical">Critical</button>
+                      <button class="severity-filter px-3 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800" data-severity="high">High</button>
+                      <button class="severity-filter px-3 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800" data-severity="medium">Medium</button>
+                      <button class="severity-filter px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800" data-severity="low">Low</button>
+                    </div>
+                    <div class="flex-grow"></div>
+                    <div class="relative">
+                      <input type="text" id="eventSearch" placeholder="Search events..." class="block w-full pr-10 sm:text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                      <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Events content -->
+                  <div id="eventsContent" class="space-y-4">
+                    <!-- Will be populated by JavaScript -->
+                  </div>
+                </div>
+                
+                <!-- IP Analysis Tab -->
+                <div id="ipsTab" class="tab-content hidden">
+                  <div class="flex flex-col md:flex-row gap-6">
+                    <div class="md:w-1/2">
+                      <h3 class="text-lg font-medium text-gray-900 mb-3">Top Source IPs</h3>
+                      <div id="ipChart" class="h-80"></div>
+                    </div>
+                    <div class="md:w-1/2">
+                      <h3 class="text-lg font-medium text-gray-900 mb-3">Suspicious IP Activity</h3>
+                      <div id="suspiciousIPs" class="overflow-auto max-h-80 rounded-md border border-gray-200">
+                        <!-- Will be populated by JavaScript -->
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="mt-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-3">IP Details</h3>
+                    <div class="mb-3">
+                      <div class="relative">
+                        <input type="text" id="ipSearch" placeholder="Search IP address..." class="block w-full pr-10 sm:text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                          <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="ipDetails" class="overflow-x-auto">
+                      <!-- Will be populated by JavaScript -->
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- User Activity Tab -->
+                <div id="usersTab" class="tab-content hidden">
+                  <div class="flex flex-col md:flex-row gap-6">
+                    <div class="md:w-1/2">
+                      <h3 class="text-lg font-medium text-gray-900 mb-3">Most Active Users</h3>
+                      <div id="userChart" class="h-80"></div>
+                    </div>
+                    <div class="md:w-1/2">
+                      <h3 class="text-lg font-medium text-gray-900 mb-3">Authentication Events</h3>
+                      <div id="authEvents" class="overflow-auto max-h-80 rounded-md border border-gray-200">
+                        <!-- Will be populated by JavaScript -->
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="mt-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-3">User Details</h3>
+                    <div class="mb-3">
+                      <div class="relative">
+                        <input type="text" id="userSearch" placeholder="Search username..." class="block w-full pr-10 sm:text-sm border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500">
+                        <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                          <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                    <div id="userDetails" class="overflow-x-auto">
+                      <!-- Will be populated by JavaScript -->
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Traffic Patterns Tab -->
+                <div id="trafficTab" class="tab-content hidden">
+                  <div class="flex flex-col md:flex-row gap-6">
+                    <div class="md:w-1/2">
+                      <h3 class="text-lg font-medium text-gray-900 mb-3">Request Methods</h3>
+                      <div id="methodChart" class="h-64"></div>
+                    </div>
+                    <div class="md:w-1/2">
+                      <h3 class="text-lg font-medium text-gray-900 mb-3">Status Codes</h3>
+                      <div id="statusChart" class="h-64"></div>
+                    </div>
+                  </div>
+                  
+                  <div class="mt-6">
+                    <h3 class="text-lg font-medium text-gray-900 mb-3">Top Requested Resources</h3>
+                    <div id="topResources" class="overflow-x-auto">
+                      <!-- Will be populated by JavaScript -->
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Log Viewer Tab -->
+                <div id="logsTab" class="tab-content hidden">
+                  <div class="mb-4 flex items-center justify-between">
+                    <h3 class="text-lg font-medium text-gray-900">Log Entries</h3>
+                    <div class="flex items-center space-x-3">
+                      <input type="text" id="logSearch" placeholder="Search logs..." class="text-sm rounded-md border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                      <select id="logFilter" class="text-sm rounded-md border-gray-300 focus:ring-blue-500 focus:border-blue-500">
+                        <option value="all">All Logs</option>
+                        <option value="error">Errors</option>
+                        <option value="warning">Warnings</option>
+                        <option value="info">Info</option>
+                      </select>
+                    </div>
+                  </div>
+                  
+                  <div id="logEntries" class="bg-gray-50 p-4 rounded-md h-[600px] overflow-auto font-mono text-sm custom-scrollbar">
+                    <!-- Will be populated by JavaScript -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+  
+  <script>
+    /**
+     * Log Analysis Patterns
+     * Advanced detection patterns for common security events in logs
+     */
+    const logAnalysisPatterns = {
+      // Authentication-related patterns
+      authentication: {
+        patterns: [
+          { 
+            regex: /\b(?:failed|failure|invalid)\s+(?:login|password|authentication)\b/i,
+            severity: "medium", 
+            category: "auth_failure",
+            description: "Authentication failure",
+          },
+          { 
+            regex: /\b(?:invalid|failed)\s+user\s+\w+\b/i,
+            severity: "medium", 
+            category: "auth_failure",
+            description: "Invalid username login attempt",
+          },
+          { 
+            regex: /\bbruteforce\s+(?:detected|attempt|attack)\b/i,
+            severity: "critical", 
+            category: "brute_force",
+            description: "Brute force attack detected",
+          },
+          { 
+            regex: /\btoo\s+many\s+(?:failed|authentication)\s+attempts\b/i,
+            severity: "high", 
+            category: "brute_force",
+            description: "Multiple authentication failures",
+          },
+          { 
+            regex: /\blogin\s+from\s+unknown\s+location\b/i,
+            severity: "medium", 
+            category: "anomalous_login",
+            description: "Login from unusual location",
+          },
+          { 
+            regex: /\bsession\s+hijack(?:ing|ed)?\b/i,
+            severity: "critical", 
+            category: "session_hijacking",
+            description: "Possible session hijacking detected",
+          }
+        ]
+      },
+      // Access control and permission issues
+      accessControl: {
+        patterns: [
+          { 
+            regex: /\b(?:permission|access)\s+denied\b/i,
+            severity: "low", 
+            category: "access_denied",
+            description: "Permission denied",
+          },
+          { 
+            regex: /\bunauthorized\s+access\b/i,
+            severity: "medium", 
+            category: "unauthorized_access",
+            description: "Unauthorized access attempt",
+          },
+          { 
+            regex: /\bprivilege\s+escalation\b/i,
+            severity: "critical", 
+            category: "privilege_escalation",
+            description: "Privilege escalation attempt",
+          },
+          { 
+            regex: /\b(?:illegal|invalid)\s+(?:access|permission)\b/i,
+            severity: "high", 
+            category: "illegal_access",
+            description: "Illegal access attempt",
+          }
+        ]
+      },
+      // Network scanning and reconnaissance
+      scanning: {
+        patterns: [
+          { 
+            regex: /\bport\s+scan(?:ning)?\b/i,
+            severity: "high", 
+            category: "port_scan",
+            description: "Port scanning detected",
+          },
+          { 
+            regex: /\bvulnerability\s+scan(?:ning)?\b/i,
+            severity: "high", 
+            category: "vulnerability_scan",
+            description: "Vulnerability scan detected",
+          },
+          { 
+            regex: /\bnmap\b|\bnikto\b|\bdirb\b|\bgobuster\b/i,
+            severity: "high", 
+            category: "scan_tool",
+            description: "Scanning tool detected",
+          },
+          { 
+            regex: /\bscanning\s+activity\b/i,
+            severity: "medium", 
+            category: "scanning",
+            description: "Scanning activity detected",
+          }
+        ]
+      },
+      // Web attacks and exploits
+      webAttacks: {
+        patterns: [
+          { 
+            regex: /\bsql\s+injection\b/i,
+            severity: "critical", 
+            category: "sql_injection",
+            description: "SQL injection attempt",
+          },
+          { 
+            regex: /\b(?:xss|cross\s*site\s*scripting)\b/i,
+            severity: "high", 
+            category: "xss",
+            description: "Cross-site scripting attempt",
+          },
+          { 
+            regex: /\b(?:csrf|cross\s*site\s*request\s*forgery)\b/i,
+            severity: "high", 
+            category: "csrf",
+            description: "Cross-site request forgery attempt",
+          },
+          { 
+            regex: /\bpath\s+traversal\b/i,
+            severity: "high", 
+            category: "path_traversal",
+            description: "Path traversal attempt",
+          },
+          { 
+            regex: /\bcommand\s+(?:injection|execution)\b/i,
+            severity: "critical", 
+            category: "command_injection",
+            description: "Command injection attempt",
+          },
+          { 
+            regex: /\bfile\s+(?:inclusion|upload)\b/i,
+            severity: "high", 
+            category: "file_inclusion",
+            description: "File inclusion/upload attempt",
+          }
+        ]
+      },
+      // Web server/application server errors
+      serverErrors: {
+        patterns: [
+          { 
+            regex: /\b(?:5[0-9]{2})\s+error\b|\bHTTP\/[0-9.]+\s+5[0-9]{2}\b/i,
+            severity: "medium", 
+            category: "server_error",
+            description: "Server error (5xx)",
+          },
+          { 
+            regex: /\bmemory\s+leak\b/i,
+            severity: "high", 
+            category: "memory_leak",
+            description: "Memory leak detected",
+          },
+          { 
+            regex: /\bout\s+of\s+memory\b/i,
+            severity: "high", 
+            category: "out_of_memory",
+            description: "Out of memory error",
+          },
+          { 
+            regex: /\bstack\s+overflow\b/i,
+            severity: "high", 
+            category: "stack_overflow",
+            description: "Stack overflow detected",
+          },
+          { 
+            regex: /\bconnection\s+(?:timeout|reset)\b/i,
+            severity: "low", 
+            category: "connection_issue",
+            description: "Connection issue",
+          }
+        ]
+      },
+      // System security and operations
+      systemSecurity: {
+        patterns: [
+          { 
+            regex: /\bfirewall\s+(?:block|deny|reject)/i,
+            severity: "low", 
+            category: "firewall_block",
+            description: "Firewall block",
+          },
+          { 
+            regex: /\bantivirus\s+(?:alert|detection)\b/i,
+            severity: "high", 
+            category: "malware_detection",
+            description: "Antivirus detection",
+          },
+          { 
+            regex: /\bmalware\s+(?:detected|found)\b/i,
+            severity: "critical", 
+            category: "malware_detection",
+            description: "Malware detected",
+          },
+          { 
+            regex: /\bransomware\b/i,
+            severity: "critical", 
+            category: "ransomware",
+            description: "Ransomware activity detected",
+          },
+          { 
+            regex: /\bconfiguration\s+(?:error|issue)\b/i,
+            severity: "medium", 
+            category: "config_error",
+            description: "Configuration error",
+          }
+        ]
+      },
+      // Specific URL attack patterns
+      suspiciousURLs: {
+        patterns: [
+          { 
+            regex: /\b(?:\/etc\/passwd|\/etc\/shadow|\/proc\/self\/environ)\b/i,
+            severity: "critical", 
+            category: "sensitive_file_access",
+            description: "Sensitive file access attempt",
+          },
+          { 
+            regex: /\.\.\/|%2e%2e%2f|%252e%252e%252f/i,
+            severity: "high", 
+            category: "directory_traversal",
+            description: "Directory traversal attempt",
+          },
+          { 
+            regex: /(?:exec|system|passthru|shell_exec|eval)\s*\(/i,
+            severity: "critical", 
+            category: "code_execution",
+            description: "Code execution attempt",
+          },
+          { 
+            regex: /(?:select|union|insert|update|delete)\s+.*?\s+from\s+/i,
+            severity: "critical", 
+            category: "sql_injection",
+            description: "SQL injection attempt",
+          },
+          { 
+            regex: /(?:\/admin|\/administrator|\/wp-admin|\/login|\/user|\/users|\/signup)/i,
+            severity: "low", 
+            category: "admin_access",
+            description: "Admin access attempt",
+          }
+        ]
+      },
+      // HTTP Method-based attacks
+      httpMethods: {
+        patterns: [
+          { 
+            regex: /HEAD\s+\S+\s+HTTP\/[0-9.]+/i,
+            severity: "low", 
+            category: "reconnaissance",
+            description: "HEAD request (possible reconnaissance)",
+          },
+          { 
+            regex: /OPTIONS\s+\S+\s+HTTP\/[0-9.]+/i,
+            severity: "low", 
+            category: "reconnaissance",
+            description: "OPTIONS request (possible reconnaissance)",
+          },
+          { 
+            regex: /TRACE\s+\S+\s+HTTP\/[0-9.]+/i,
+            severity: "medium", 
+            category: "trace_method",
+            description: "TRACE request (possible CSRF)",
+          },
+          { 
+            regex: /CONNECT\s+\S+\s+HTTP\/[0-9.]+/i,
+            severity: "medium", 
+            category: "connect_method",
+            description: "CONNECT request (possible tunneling)",
+          },
+          { 
+            regex: /PUT\s+\S+\s+HTTP\/[0-9.]+|DELETE\s+\S+\s+HTTP\/[0-9.]+/i,
+            severity: "medium", 
+            category: "write_method",
+            description: "PUT/DELETE request (possible unauthorized modification)",
+          }
+        ]
+      }
+    };
+
+    // Status code categories for error detection
+    const statusCodeCategories = {
+      "2xx": { description: "Success", severity: "info" },
+      "3xx": { description: "Redirection", severity: "info" },
+      "4xx": { description: "Client Error", severity: "low" },
+      "401": { description: "Unauthorized", severity: "medium" },
+      "403": { description: "Forbidden", severity: "medium" },
+      "404": { description: "Not Found", severity: "low" },
+      "5xx": { description: "Server Error", severity: "high" },
+      "500": { description: "Internal Server Error", severity: "high" },
+      "503": { description: "Service Unavailable", severity: "high" }
+    };
+
+    // User agent patterns to detect scanning tools
+    const scanningUserAgents = [
+      /nmap|nikto|gobuster|dirb|wpscan|sqlmap|arachni|zap|burp|acunetix/i,
+      /masscan|nessus|openvas|qualys|rapid7|metasploit|shodan|nuclei/i,
+      /scanner|crawl|scan|recon/i
+    ];
+
+    /**
+     * LogAnalyzer - Core log analysis engine
+     * Handles chunked processing of large log files
+     */
+    class LogAnalyzer {
+      constructor() {
+        this.reset();
+        this.chunkSize = 5 * 1024 * 1024; // 5MB chunks for processing
+        this.maxChunkLines = 100000; // Maximum lines per processing chunk
+        this.timeoutBetweenChunks = 10; // ms to allow UI updates between chunks
+      }
+      
+      reset() {
+        this.results = {
+          stats: {
+            totalLines: 0,
+            processedLines: 0,
+            uniqueIPs: new Set(),
+            uniqueUsers: new Set(),
+            criticalEvents: 0,
+            highEvents: 0,
+            mediumEvents: 0,
+            lowEvents: 0,
+            infoEvents: 0
+          },
+          events: [],
+          ipActivity: {},
+          userActivity: {},
+          trafficStats: {
+            methods: {},
+            statusCodes: {},
+            requestedResources: {},
+            timeDistribution: {}
+          },
+          detectedFormat: null,
+          parsedEntries: []
+        };
+        
+        this.parser = null;
+        this.file = null;
+        this.fileSize = 0;
+        this.cancelProcessing = false;
+      }
+      
+      async analyzeLogFile(file, options = {}) {
+        try {
+          this.reset();
+          this.file = file;
+          this.fileSize = file.size;
+          this.options = {
+            format: 'auto',
+            timeRange: 'all',
+            detectScanningActivity: true,
+            detectAuthFailures: true,
+            detectAttackPatterns: true,
+            detectAnomalies: true,
+            ...options
+          };
+          
+          // Begin analysis
+          this.updateProgress(0, "Initializing log analysis...");
+          
+          // Detect log format from file extension or first few lines
+          const formatDetected = await this.detectLogFormat();
+          this.results.detectedFormat = formatDetected;
+          this.updateProgress(5, `Detected log format: ${formatDetected}`);
+          
+          // Create appropriate parser based on format
+          this.createParser(formatDetected);
+          
+          // Process the file in chunks
+          const totalChunks = Math.ceil(file.size / this.chunkSize);
+          let processedChunks = 0;
+          let processedBytes = 0;
+          let processedLines = 0;
+          
+          for (let offset = 0; offset < file.size && !this.cancelProcessing; offset += this.chunkSize) {
+            // Read a chunk of the file
+            const chunk = await this.readFileChunk(file, offset, this.chunkSize);
+            processedBytes += chunk.byteLength;
+            
+            // Process chunk
+            const lines = this.splitIntoLines(chunk);
+            const numLines = Math.min(lines.length, this.maxChunkLines);
+            
+            // Process lines in current chunk
+            for (let i = 0; i < numLines && !this.cancelProcessing; i++) {
+              if (lines[i].trim().length > 0) {
+                this.processLogLine(lines[i]);
+                processedLines++;
+              }
+              
+              // Update progress periodically
+              if (i % 1000 === 0) {
+                const progress = Math.min(98, Math.round((processedBytes / file.size) * 100));
+                this.updateProgress(progress, `Processing lines... (${processedLines.toLocaleString()} processed)`);
+                this.updateLinesProcessed(processedLines);
+                this.updateIssuesFound(this.results.events.length);
+                
+                // Allow UI to update
+                await new Promise(resolve => setTimeout(resolve, 0));
+              }
+            }
+            
+            processedChunks++;
+            
+            // Allow UI to update between chunks
+            await new Promise(resolve => setTimeout(resolve, this.timeoutBetweenChunks));
+          }
+          
+          // If process was cancelled
+          if (this.cancelProcessing) {
+            this.updateProgress(100, "Analysis cancelled.");
+            return null;
+          }
+          
+          // Analysis complete, finalize results
+          this.finalizeResults();
+          this.updateProgress(100, "Analysis complete!");
+          
+          return this.results;
+          
+        } catch (error) {
+          console.error('Log analysis failed:', error);
+          throw new Error(`Analysis failed: ${error.message}`);
+        }
+      }
+      
+      async detectLogFormat() {
+        const format = this.options.format;
+        if (format !== 'auto') {
+          return format;
+        }
+        
+        // Try to determine from file extension
+        const fileName = this.file.name.toLowerCase();
+        if (fileName.endsWith('.csv')) return 'csv';
+        if (fileName.endsWith('.json')) return 'json';
+        
+        // Read first few lines and analyze
+        const sample = await this.readFileChunk(this.file, 0, 10240); // Read first 10KB
+        const lines = this.splitIntoLines(sample);
+        
+        // Check for common log format signatures
+        if (lines.length > 0) {
+          const firstLine = lines[0];
+          
+          // Check for JSON format
+          if (firstLine.trim().startsWith('{') && firstLine.includes('"')) {
+            return 'json';
+          }
+          
+          // Check for CSV format
+          if (firstLine.includes(',') && (firstLine.match(/,/g) || []).length > 3) {
+            return 'csv';
+          }
+          
+          // Check for Syslog format
+          if (/^\<\d+\>/.test(firstLine) || /^[A-Z][a-z]{2}\s+\d+\s+\d{2}:\d{2}:\d{2}/.test(firstLine)) {
+            return 'syslog';
+          }
+          
+          // Check for Apache/NGINX format
+          if (/\d+\.\d+\.\d+\.\d+/.test(firstLine) && 
+              (firstLine.includes('HTTP') || firstLine.includes('GET') || firstLine.includes('POST'))) {
+            return 'apache';
+          }
+          
+          // Check for IIS format
+          if (firstLine.includes('s-ip') && firstLine.includes('cs-method') && firstLine.includes('cs-uri-stem')) {
+            return 'iis';
+          }
+          
+          // Check for AWS CloudTrail
+          if (firstLine.includes('userIdentity') && firstLine.includes('eventTime') && firstLine.includes('awsRegion')) {
+            return 'aws';
+          }
+        }
+        
+        // Default to Apache-like logs as most common
+        return 'apache';
+      }
+      
+      createParser(format) {
+        switch (format) {
+          case 'apache':
+          case 'nginx':
+            this.parser = this.parseApacheLogLine;
+            break;
+          case 'iis':
+            this.parser = this.parseIISLogLine;
+            break;
+          case 'syslog':
+            this.parser = this.parseSyslogLine;
+            break;
+          case 'csv':
+            this.parser = this.parseCSVLine;
+            break;
+          case 'json':
+            this.parser = this.parseJSONLine;
+            break;
+          case 'aws':
+            this.parser = this.parseAWSLogLine;
+            break;
+          case 'custom':
+            this.parser = this.parseCustomLogLine;
+            break;
+          default:
+            this.parser = this.parseGenericLogLine;
+        }
+      }
+      
+      async readFileChunk(file, offset, size) {
+        const slice = file.slice(offset, offset + size);
+        const buffer = await slice.arrayBuffer();
+        return buffer;
+      }
+      
+      splitIntoLines(buffer) {
+        // Convert buffer to text
+        const decoder = new TextDecoder('utf-8');
+        const text = decoder.decode(buffer);
+        
+        // Split into lines, handling different line endings
+        return text.split(/\r?\n/);
+      }
+      
+      processLogLine(line) {
+        if (!line.trim()) return;
+        
+        // Parse the log line based on detected format
+        const parsedLine = this.parser.call(this, line);
+        if (!parsedLine) return;
+        
+        // Apply time range filter if specified
+        if (!this.isInTimeRange(parsedLine.timestamp)) return;
+        
+        // Store parsed entry
+        this.results.stats.totalLines++;
+        this.results.parsedEntries.push(parsedLine);
+        
+        // Analyze for security events
+        this.analyzeLogEntry(parsedLine);
+        
+        // Update IP and user activity stats
+        this.updateIPActivity(parsedLine);
+        this.updateUserActivity(parsedLine);
+        
+        // Update traffic statistics
+        this.updateTrafficStats(parsedLine);
+      }
+      
+      analyzeLogEntry(entry) {
+        // Find matches for security patterns
+        for (const [category, data] of Object.entries(logAnalysisPatterns)) {
+          // Skip categories based on options
+          if (!this.shouldAnalyzeCategory(category)) continue;
+          
+          for (const pattern of data.patterns) {
+            // Match the pattern against the log message
+            const line = (entry.message || '') + ' ' + (entry.url || '') + ' ' + (entry.userAgent || '');
+            
+            if (pattern.regex.test(line)) {
+              // Record the event
+              const event = {
+                timestamp: entry.timestamp,
+                category: pattern.category,
+                severity: pattern.severity,
+                description: pattern.description,
+                ip: entry.ip || 'unknown',
+                user: entry.user || 'unknown',
+                url: entry.url || null,
+                statusCode: entry.statusCode || null,
+                message: entry.message || line,
+                rawLog: entry.raw
+              };
+              
+              this.results.events.push(event);
+              
+              // Update stats
+              switch (pattern.severity) {
+                case 'critical': this.results.stats.criticalEvents++; break;
+                case 'high': this.results.stats.highEvents++; break;
+                case 'medium': this.results.stats.mediumEvents++; break;
+                case 'low': this.results.stats.lowEvents++; break;
+                default: this.results.stats.infoEvents++; break;
+              }
+            }
+          }
+        }
+        
+        // Additionally check for scanning activity based on user agent
+        if (this.options.detectScanningActivity && entry.userAgent) {
+          for (const pattern of scanningUserAgents) {
+            if (pattern.test(entry.userAgent)) {
+              this.results.events.push({
+                timestamp: entry.timestamp,
+                category: 'scanner_detected',
+                severity: 'high',
+                description: 'Scanning tool detected in User-Agent',
+                ip: entry.ip || 'unknown',
+                user: entry.user || 'unknown',
+                url: entry.url || null,
+                userAgent: entry.userAgent,
+                rawLog: entry.raw
+              });
+              
+              this.results.stats.highEvents++;
+              break;
+            }
+          }
+        }
+        
+        // Check status codes for error conditions
+        if (entry.statusCode) {
+          const statusCode = entry.statusCode.toString();
+          let category = null;
+          
+          if (statusCodeCategories[statusCode]) {
+            category = statusCodeCategories[statusCode];
+          } else if (statusCode.startsWith('5') && statusCodeCategories['5xx']) {
+            category = statusCodeCategories['5xx'];
+          } else if (statusCode.startsWith('4') && statusCodeCategories['4xx']) {
+            category = statusCodeCategories['4xx'];
+          }
+          
+          if (category && (category.severity === 'medium' || category.severity === 'high')) {
+            this.results.events.push({
+              timestamp: entry.timestamp,
+              category: `status_${statusCode}`,
+              severity: category.severity,
+              description: `${category.description} (${statusCode})`,
+              ip: entry.ip || 'unknown',
+              user: entry.user || 'unknown',
+              url: entry.url || null,
+              statusCode: entry.statusCode,
+              method: entry.method,
+              rawLog: entry.raw
+            });
+            
+            if (category.severity === 'high') {
+              this.results.stats.highEvents++;
+            } else if (category.severity === 'medium') {
+              this.results.stats.mediumEvents++;
+            }
+          }
+        }
+      }
+      
+      updateIPActivity(entry) {
+        if (!entry.ip) return;
+        
+        // Track unique IPs
+        this.results.stats.uniqueIPs.add(entry.ip);
+        
+        // Initialize IP record if needed
+        if (!this.results.ipActivity[entry.ip]) {
+          this.results.ipActivity[entry.ip] = {
+            requests: 0,
+            methods: {},
+            urls: {},
+            statusCodes: {},
+            userAgents: new Set(),
+            firstSeen: entry.timestamp,
+            lastSeen: entry.timestamp,
+            events: []
+          };
+        }
+        
+        const ipData = this.results.ipActivity[entry.ip];
+        
+        // Update IP statistics
+        ipData.requests++;
+        ipData.lastSeen = entry.timestamp;
+        
+        if (entry.method) {
+          ipData.methods[entry.method] = (ipData.methods[entry.method] || 0) + 1;
+        }
+        
+        if (entry.url) {
+          ipData.urls[entry.url] = (ipData.urls[entry.url] || 0) + 1;
+        }
+        
+        if (entry.statusCode) {
+          ipData.statusCodes[entry.statusCode] = (ipData.statusCodes[entry.statusCode] || 0) + 1;
+        }
+        
+        if (entry.userAgent) {
+          ipData.userAgents.add(entry.userAgent);
+        }
+      }
+      
+      updateUserActivity(entry) {
+        if (!entry.user || entry.user === '-' || entry.user === 'unknown') return;
+        
+        // Track unique users
+        this.results.stats.uniqueUsers.add(entry.user);
+        
+        // Initialize user record if needed
+        if (!this.results.userActivity[entry.user]) {
+          this.results.userActivity[entry.user] = {
+            requests: 0,
+            ips: new Set(),
+            urls: {},
+            firstSeen: entry.timestamp,
+            lastSeen: entry.timestamp,
+            authSuccess: 0,
+            authFailure: 0,
+            events: []
+          };
+        }
+        
+        const userData = this.results.userActivity[entry.user];
+        
+        // Update user statistics
+        userData.requests++;
+        userData.lastSeen = entry.timestamp;
+        
+        if (entry.ip) {
+          userData.ips.add(entry.ip);
+        }
+        
+        if (entry.url) {
+          userData.urls[entry.url] = (userData.urls[entry.url] || 0) + 1;
+        }
+        
+        // Track authentication events
+        if (entry.message && /\b(?:login|logged in|auth(?:entication)?)\s+success/i.test(entry.message)) {
+          userData.authSuccess++;
+        } else if (entry.message && /\b(?:login|auth(?:entication)?)\s+fail/i.test(entry.message)) {
+          userData.authFailure++;
+        }
+      }
+      
+      updateTrafficStats(entry) {
+        const stats = this.results.trafficStats;
+        
+        // Update method stats
+        if (entry.method) {
+          stats.methods[entry.method] = (stats.methods[entry.method] || 0) + 1;
+        }
+        
+        // Update status code stats
+        if (entry.statusCode) {
+          stats.statusCodes[entry.statusCode] = (stats.statusCodes[entry.statusCode] || 0) + 1;
+        }
+        
+        // Update requested resources stats
+        if (entry.url) {
+          // Extract path from URL
+          const urlPath = entry.url.split('?')[0];
+          stats.requestedResources[urlPath] = (stats.requestedResources[urlPath] || 0) + 1;
+        }
+        
+        // Update time distribution (hourly)
+        if (entry.timestamp) {
+          try {
+            const hour = moment(entry.timestamp).format('YYYY-MM-DD HH:00');
+            stats.timeDistribution[hour] = (stats.timeDistribution[hour] || 0) + 1;
+          } catch (e) {
+            // Ignore timestamp parsing errors
+          }
+        }
+      }
+      
+      isInTimeRange(timestamp) {
+        if (!timestamp || this.options.timeRange === 'all') return true;
+        
+        const now = moment();
+        let startTime, endTime;
+        
+        switch (this.options.timeRange) {
+          case 'day':
+            startTime = moment().subtract(1, 'days');
+            break;
+          case 'week':
+            startTime = moment().subtract(7, 'days');
+            break;
+          case 'month':
+            startTime = moment().subtract(30, 'days');
+            break;
+          case 'custom':
+            startTime = this.options.startTime ? moment(this.options.startTime) : null;
+            endTime = this.options.endTime ? moment(this.options.endTime) : null;
+            break;
+          default:
+            return true;
+        }
+        
+        const entryTime = moment(timestamp);
+        
+        if (this.options.timeRange === 'custom') {
+          return (!startTime || entryTime.isAfter(startTime)) && 
+                 (!endTime || entryTime.isBefore(endTime));
+        } else {
+          return entryTime.isAfter(startTime) && entryTime.isBefore(now);
+        }
+      }
+      
+      shouldAnalyzeCategory(category) {
+        switch(category) {
+          case 'authentication':
+            return this.options.detectAuthFailures;
+          case 'scanning':
+            return this.options.detectScanningActivity;
+          case 'webAttacks':
+          case 'suspiciousURLs':
+          case 'httpMethods':
+            return this.options.detectAttackPatterns;
+          case 'serverErrors':
+          case 'accessControl':
+          case 'systemSecurity':
+            return true; // Always analyze these
+          default:
+            return true;
+        }
+      }
+      
+      finalizeResults() {
+        // Convert Sets to counts
+        this.results.stats.uniqueIPCount = this.results.stats.uniqueIPs.size;
+        this.results.stats.uniqueUserCount = this.results.stats.uniqueUsers.size;
+        
+        // Remove the actual Sets (can't be serialized easily)
+        delete this.results.stats.uniqueIPs;
+        delete this.results.stats.uniqueUsers;
+        
+        // Process IP activity - convert Sets to arrays
+        for (const ip in this.results.ipActivity) {
+          this.results.ipActivity[ip].userAgents = Array.from(this.results.ipActivity[ip].userAgents);
+          
+          // Calculate request frequency per minute for scanning detection
+          const duration = moment(this.results.ipActivity[ip].lastSeen).diff(
+            moment(this.results.ipActivity[ip].firstSeen), 'minutes'
+          ) || 1; // Prevent division by zero
+          
+          this.results.ipActivity[ip].requestsPerMinute = this.results.ipActivity[ip].requests / duration;
+          
+          // Determine if this IP shows scanning behavior
+          this.results.ipActivity[ip].potentialScanner = 
+            this.results.ipActivity[ip].requestsPerMinute > 30 || // High frequency
+            Object.keys(this.results.ipActivity[ip].urls).length > 50 || // Many different URLs
+            Object.keys(this.results.ipActivity[ip].statusCodes)
+              .filter(code => code.startsWith('4')).length > 10; // Many 4xx errors
+        }
+        
+        // Process user activity - convert Sets to arrays
+        for (const user in this.results.userActivity) {
+          this.results.userActivity[user].ips = Array.from(this.results.userActivity[user].ips);
+          
+          // Determine if this user shows suspicious behavior
+          this.results.userActivity[user].suspicious = 
+            this.results.userActivity[user].authFailure > 5 || // Many auth failures
+            this.results.userActivity[user].ips.length > 3; // Using many IPs
+        }
+        
+        // Sort events by timestamp (newest first)
+        this.results.events.sort((a, b) => {
+          return moment(b.timestamp).valueOf() - moment(a.timestamp).valueOf();
+        });
+        
+        // Limit number of stored raw log entries to prevent memory issues
+        if (this.results.parsedEntries.length > 10000) {
+          this.results.parsedEntries = this.results.parsedEntries.slice(0, 10000);
+        }
+      }
+      
+      cancel() {
+        this.cancelProcessing = true;
+      }
+      
+      // Log parsers for different formats
+      parseApacheLogLine(line) {
+        // Common Log Format: %h %l %u %t \"%r\" %>s %b
+        // Combined Log Format: %h %l %u %t \"%r\" %>s %b \"%{Referer}i\" \"%{User-agent}i\"
+        
+        // Simple regex for Apache/NGINX logs
+        const regex = /^(\S+) (\S+) (\S+) \[([^\]]+)\] "([^"]*)" (\d+) (\S+)(?: "([^"]*)" "([^"]*)")?/;
+        const match = line.match(regex);
+        
+        if (match) {
+          const [, ip, , user, timestamp, request, statusCode, bytes, referer, userAgent] = match;
+          
+          // Parse request parts (METHOD URL PROTOCOL)
+          let method = null, url = null;
+          if (request) {
+            const parts = request.split(' ');
+            method = parts[0];
+            url = parts[1];
+          }
+          
+          return {
+            timestamp: this.parseTimestamp(timestamp),
+            ip,
+            user: user !== '-' ? user : null,
+            method,
+            url,
+            statusCode: parseInt(statusCode, 10),
+            bytes: bytes !== '-' ? parseInt(bytes, 10) : 0,
+            referer: referer !== '-' ? referer : null,
+            userAgent: userAgent || null,
+            raw: line,
+            message: request
+          };
+        }
+        
+        return null;
+      }
+      
+      parseIISLogLine(line) {
+        // Skip comment lines
+        if (line.startsWith('#')) return null;
+        
+        // IIS logs are space or comma separated with field names in header line
+        const fields = line.split(' ');
+        
+        if (fields.length < 10) return null;
+        
+        return {
+          timestamp: this.parseTimestamp(fields[0] + ' ' + fields[1]),
+          ip: fields[8], // c-ip
+          method: fields[4], // cs-method
+          url: fields[5], // cs-uri-stem
+          statusCode: parseInt(fields[11], 10), // sc-status
+          userAgent: fields[9], // cs(User-Agent)
+          raw: line,
+          message: line
+        };
+      }
+      
+      parseSyslogLine(line) {
+        // Simple syslog format: <PRI>TIMESTAMP HOSTNAME TAG: MESSAGE
+        const regex = /^(?:<\d+>)?(\w{3}\s+\d+\s+\d{2}:\d{2}:\d{2})(?:\s+(\S+))?\s+([^:]+):\s+(.*)/;
+        const match = line.match(regex);
+        
+        if (match) {
+          const [, timestamp, hostname, tag, message] = match;
+          
+          // Extract IP addresses from message if available
+          const ipMatch = message.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/);
+          const ip = ipMatch ? ipMatch[0] : null;
+          
+          // Extract usernames from message if available
+          const userMatch = message.match(/\buser[=:]([^\s,]+)/i) || 
+                           message.match(/\buser\s+(\S+)/i) ||
+                           message.match(/\blogin\s+(\S+)/i);
+          const user = userMatch ? userMatch[1] : null;
+          
+          return {
+            timestamp: this.parseTimestamp(timestamp),
+            hostname,
+            tag,
+            message,
+            ip,
+            user,
+            raw: line
+          };
+        }
+        
+        return null;
+      }
+      
+      parseCSVLine(line) {
+        // Use PapaParse for robust CSV parsing
+        const parsed = Papa.parse(line, { header: false }).data[0];
+        
+        if (!parsed || parsed.length < 3) return null;
+        
+        // Try to automatically detect column meanings
+        let timestamp = null, ip = null, user = null, method = null, url = null, statusCode = null, userAgent = null;
+        
+        // Try each column
+        for (let i = 0; i < parsed.length; i++) {
+          const value = parsed[i];
+          
+          // Skip empty values
+          if (!value || value === '-') continue;
+          
+          // Detect column type by content
+          if (!timestamp && this.isTimestamp(value)) {
+            timestamp = value;
+          } else if (!ip && this.isIPAddress(value)) {
+            ip = value;
+          } else if (!method && /^(GET|POST|PUT|DELETE|HEAD|OPTIONS|TRACE|CONNECT)$/i.test(value)) {
+            method = value;
+          } else if (!statusCode && /^\d{3}$/.test(value) && parseInt(value, 10) >= 100 && parseInt(value, 10) < 600) {
+            statusCode = parseInt(value, 10);
+          } else if (!url && value.startsWith('/')) {
+            url = value;
+          } else if (!user && !this.isIPAddress(value) && !this.isTimestamp(value) && value.length < 50) {
+            user = value;
+          } else if (!userAgent && value.length > 20 && /mozilla|chrome|safari|firefox|wget|curl/i.test(value)) {
+            userAgent = value;
+          }
+        }
+        
+        return {
+          timestamp: timestamp ? this.parseTimestamp(timestamp) : new Date().toISOString(),
+          ip,
+          user,
+          method,
+          url,
+          statusCode,
+          userAgent,
+          raw: line,
+          message: parsed.join(' ')
+        };
+      }
+      
+      parseJSONLine(line) {
+        try {
+          const parsed = JSON.parse(line);
+          
+          // Extract common fields from various JSON log formats
+          return {
+            timestamp: parsed.timestamp || parsed.time || parsed.date || parsed.eventTime || new Date().toISOString(),
+            ip: parsed.ip || parsed.clientIp || parsed.sourceIp || parsed.remoteIp || parsed.source_ip || parsed.remote_addr,
+            user: parsed.user || parsed.username || parsed.userId || parsed.userIdentity?.userName || parsed.user_name,
+            method: parsed.method || parsed.httpMethod || parsed.requestMethod || parsed.http_method,
+            url: parsed.url || parsed.uri || parsed.requestUrl || parsed.request_uri || parsed.path,
+            statusCode: parsed.status || parsed.statusCode || parsed.http_status || parsed.responseCode,
+            userAgent: parsed.userAgent || parsed.user_agent || parsed.ua,
+            raw: line,
+            message: parsed.message || parsed.msg || parsed.errorMessage || JSON.stringify(parsed)
+          };
+        } catch (e) {
+          // Not valid JSON
+          return null;
+        }
+      }
+      
+      parseAWSLogLine(line) {
+        try {
+          const parsed = JSON.parse(line);
+          
+          // Extract fields specific to AWS CloudTrail
+          return {
+            timestamp: parsed.eventTime,
+            ip: parsed.sourceIPAddress,
+            user: parsed.userIdentity?.userName || parsed.userIdentity?.type,
+            method: parsed.eventName,
+            url: parsed.requestParameters?.path || parsed.requestParameters?.bucketName,
+            statusCode: parsed.responseElements?.httpStatusCode,
+            userAgent: parsed.userAgent,
+            raw: line,
+            message: `${parsed.eventType} ${parsed.eventName} by ${parsed.userIdentity?.type} in ${parsed.awsRegion}`
+          };
+        } catch (e) {
+          // Not valid JSON
+          return null;
+        }
+      }
+      
+      parseCustomLogLine(line) {
+        // Use custom format string from options
+        const format = this.options.customFormat || '';
+        
+        // This is a simplified implementation - a full one would need to parse the format string
+        // and extract the relevant parts from the log line
+        
+        // Default to Apache parser for now
+        return this.parseApacheLogLine(line);
+      }
+      
+      parseGenericLogLine(line) {
+        // Fallback parser for unknown formats
+        // Tries to extract as much information as possible
+        
+        // Extract IP addresses
+        const ipMatch = line.match(/\b(?:\d{1,3}\.){3}\d{1,3}\b/);
+        const ip = ipMatch ? ipMatch[0] : null;
+        
+        // Extract timestamp patterns
+        const timestampRegexes = [
+          /\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})?/, // ISO format
+          /\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}(?:\.\d+)?/, // SQL-like format
+          /\d{2}\/\w{3}\/\d{4}:\d{2}:\d{2}:\d{2} [+-]\d{4}/, // Apache format
+          /\w{3} \d{2} \d{2}:\d{2}:\d{2}/ // Syslog format
+        ];
+        
+        let timestamp = null;
+        for (const regex of timestampRegexes) {
+          const match = line.match(regex);
+          if (match) {
+            timestamp = match[0];
+            break;
+          }
+        }
+        
+        // Extract HTTP methods
+        const methodMatch = line.match(/\b(GET|POST|PUT|DELETE|HEAD|OPTIONS|TRACE|CONNECT)\b/);
+        const method = methodMatch ? methodMatch[1] : null;
+        
+        // Extract URL paths
+        const urlMatch = line.match(/\b(\/[^\s"]*)/);
+        const url = urlMatch ? urlMatch[1] : null;
+        
+        // Extract status codes
+        const statusMatch = line.match(/\b([1-5]\d{2})\b/);
+        const statusCode = statusMatch ? parseInt(statusMatch[1], 10) : null;
+        
+        // Extract user
+        const userMatch = line.match(/\buser[=:]([^\s,]+)/i) || 
+                         line.match(/\buser\s+(\S+)/i) ||
+                         line.match(/\blogin\s+(\S+)/i);
+        const user = userMatch ? userMatch[1] : null;
+        
+        return {
+          timestamp: timestamp ? this.parseTimestamp(timestamp) : new Date().toISOString(),
+          ip,
+          user,
+          method,
+          url,
+          statusCode,
+          raw: line,
+          message: line
+        };
+      }
+      
+      parseTimestamp(timestamp) {
+        try {
+          // Try common timestamp formats
+          let parsed = moment(timestamp);
+          
+          // Try Apache format
+          if (!parsed.isValid()) {
+            parsed = moment(timestamp, 'DD/MMM/YYYY:HH:mm:ss ZZ');
+          }
+          
+          // Try syslog format
+          if (!parsed.isValid()) {
+            const currentYear = new Date().getFullYear();
+            parsed = moment(timestamp + ' ' + currentYear, 'MMM DD HH:mm:ss YYYY');
+          }
+          
+          // Return ISO string or original if parsing failed
+          return parsed.isValid() ? parsed.toISOString() : timestamp;
+        } catch (e) {
+          return timestamp;
+        }
+      }
+      
+      isTimestamp(value) {
+        // Check if string looks like a timestamp
+        return /^\d{4}-\d{2}-\d{2}/.test(value) ||  // ISO-like
+               /^\d{2}\/\w{3}\/\d{4}/.test(value) || // Apache-like
+               /^\w{3} \d{2} \d{2}:\d{2}:\d{2}/.test(value); // Syslog-like
+      }
+      
+      isIPAddress(value) {
+        // Check if string looks like an IP address
+        return /^(?:\d{1,3}\.){3}\d{1,3}$/.test(value);
+      }
+      
+      updateProgress(percent, message) {
+        const event = new CustomEvent('analysisProgress', { 
+          detail: { percent, message } 
+        });
+        window.dispatchEvent(event);
+      }
+      
+      updateLinesProcessed(count) {
+        const event = new CustomEvent('linesProcessed', { 
+          detail: { count } 
+        });
+        window.dispatchEvent(event);
+      }
+      
+      updateIssuesFound(count) {
+        const event = new CustomEvent('issuesFound', { 
+          detail: { count } 
+        });
+        window.dispatchEvent(event);
+      }
+    }
+
+    /**
+     * UI Controller - handles user interface interactions
+     */
+    class UIController {
+      constructor() {
+        this.analyzer = new LogAnalyzer();
+        this.file = null;
+        this.results = null;
+        this.charts = {};
+        
+        this.initEventListeners();
+      }
+      
+      initEventListeners() {
+        // File upload handlers
+        const dropZone = document.getElementById('dropZone');
+        const logInput = document.getElementById('logInput');
+        const browseBtn = document.getElementById('browseBtn');
+        
+        dropZone.addEventListener('dragover', (e) => {
+          e.preventDefault();
+          dropZone.classList.add('dragover');
+        });
+        
+        dropZone.addEventListener('dragleave', () => {
+          dropZone.classList.remove('dragover');
+        });
+        
+        dropZone.addEventListener('drop', (e) => {
+          e.preventDefault();
+          dropZone.classList.remove('dragover');
+          
+          const file = e.dataTransfer.files[0];
+          if (file) {
+            this.setFile(file);
+          } else {
+            this.showNotification('Please upload a log file', 'error');
+          }
+        });
+        
+        browseBtn.addEventListener('click', () => {
+          logInput.click();
+        });
+        
+        logInput.addEventListener('change', () => {
+          const file = logInput.files[0];
+          if (file) {
+            this.setFile(file);
+          }
+        });
+        
+        // Format selection handling
+        const logFormat = document.getElementById('logFormat');
+        const customFormatContainer = document.getElementById('customFormatContainer');
+        
+        logFormat.addEventListener('change', () => {
+          customFormatContainer.classList.toggle('hidden', logFormat.value !== 'custom');
+        });
+        
+        // Time range selection handling
+        const timeRange = document.getElementById('timeRange');
+        const customTimeContainer = document.getElementById('customTimeContainer');
+        
+        timeRange.addEventListener('change', () => {
+          customTimeContainer.classList.toggle('hidden', timeRange.value !== 'custom');
+        });
+        
+        // Analysis button
+        document.getElementById('analyzeBtn').addEventListener('click', () => {
+          if (this.file) {
+            this.analyzeLogFile();
+          } else {
+            this.showNotification('Please select a log file first', 'warning');
+          }
+        });
+        
+        // Progress updates
+        window.addEventListener('analysisProgress', (e) => {
+          this.updateProgress(e.detail.percent, e.detail.message);
+        });
+        
+        window.addEventListener('linesProcessed', (e) => {
+          document.getElementById('linesProcessed').textContent = e.detail.count.toLocaleString();
+        });
+        
+        window.addEventListener('issuesFound', (e) => {
+          document.getElementById('issuesFound').textContent = e.detail.count.toLocaleString();
+        });
+        
+        // Tab navigation
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+          btn.addEventListener('click', () => {
+            this.switchTab(btn.dataset.tab);
+          });
+        });
+        
+        // Severity filters
+        document.querySelectorAll('.severity-filter').forEach(btn => {
+          btn.addEventListener('click', () => {
+            this.filterEvents(btn.dataset.severity);
+          });
+        });
+        
+        // Search handlers
+        document.getElementById('eventSearch').addEventListener('input', (e) => {
+          this.searchEvents(e.target.value);
+        });
+        
+        document.getElementById('ipSearch').addEventListener('input', (e) => {
+          this.searchIPs(e.target.value);
+        });
+        
+        document.getElementById('userSearch').addEventListener('input', (e) => {
+          this.searchUsers(e.target.value);
+        });
+        
+        document.getElementById('logSearch').addEventListener('input', (e) => {
+          this.searchLogs(e.target.value);
+        });
+        
+        // Log filter handler
+        document.getElementById('logFilter').addEventListener('change', (e) => {
+          this.filterLogs(e.target.value);
+        });
+        
+        // Export buttons
+        document.getElementById('downloadJSON').addEventListener('click', () => {
+          this.downloadJSONReport();
+        });
+        
+        document.getElementById('downloadCSV').addEventListener('click', () => {
+          this.downloadCSVReport();
+        });
+        
+        // Help button
+        document.getElementById('helpBtn').addEventListener('click', () => {
+          this.showHelp();
+        });
+      }
+      
+      setFile(file) {
+        this.file = file;
+        
+        // Update UI
+        document.getElementById('fileName').textContent = file.name;
+        document.getElementById('fileSize').textContent = this.formatBytes(file.size);
+        document.getElementById('fileDetails').classList.remove('hidden');
+      }
+      
+      async analyzeLogFile() {
+        if (!this.file) return;
+        
+        try {
+          // Update UI
+          document.getElementById('progressContainer').classList.remove('hidden');
+          document.getElementById('resultsDashboard').classList.add('hidden');
+          
+          // Get analysis options
+          const options = {
+            format: document.getElementById('logFormat').value,
+            timeRange: document.getElementById('timeRange').value,
+            detectScanningActivity: document.getElementById('detectScanningActivity').checked,
+            detectAuthFailures: document.getElementById('detectAuthFailures').checked,
+            detectAttackPatterns: document.getElementById('detectAttackPatterns').checked,
+            detectAnomalies: document.getElementById('detectAnomalies').checked
+          };
+          
+          // Add custom format if selected
+          if (options.format === 'custom') {
+            options.customFormat = document.getElementById('customFormat').value;
+          }
+          
+          // Add custom time range if selected
+          if (options.timeRange === 'custom') {
+            options.startTime = document.getElementById('startTime').value;
+            options.endTime = document.getElementById('endTime').value;
+          }
+          
+          // Start analysis
+          this.results = await this.analyzer.analyzeLogFile(this.file, options);
+          
+          // If cancelled or error
+          if (!this.results) {
+            this.showNotification('Analysis was cancelled or failed', 'error');
+            document.getElementById('progressContainer').classList.add('hidden');
+            return;
+          }
+          
+          // Update UI with results
+          this.displayResults();
+          
+        } catch (error) {
+          console.error('Analysis failed:', error);
+          this.showNotification(`Analysis failed: ${error.message}`, 'error');
+        } finally {
+          document.getElementById('progressContainer').classList.add('hidden');
+        }
+      }
+      
+      updateProgress(percent, message) {
+        document.getElementById('progressBar').style.width = `${percent}%`;
+        document.getElementById('progressPercent').textContent = `${Math.round(percent)}%`;
+        document.getElementById('progressText').textContent = message;
+      }
+      
+      displayResults() {
+        if (!this.results) return;
+        
+        // Show results dashboard
+        document.getElementById('resultsDashboard').classList.remove('hidden');
+        
+        // Update summary stats
+        document.getElementById('totalEntries').textContent = this.results.stats.totalLines.toLocaleString();
+        document.getElementById('criticalEvents').textContent = this.results.stats.criticalEvents.toLocaleString();
+        document.getElementById('warningEvents').textContent = (this.results.stats.highEvents + this.results.stats.mediumEvents).toLocaleString();
+        document.getElementById('uniqueIPs').textContent = this.results.stats.uniqueIPCount.toLocaleString();
+        
+        // Create charts
+        this.createTimelineChart();
+        this.createIPChart();
+        this.createUserChart();
+        this.createMethodChart();
+        this.createStatusChart();
+        
+        // Populate tabs
+        this.displayEvents();
+        this.displayIPAnalysis();
+        this.displayUserActivity();
+        this.displayTrafficPatterns();
+        this.displayLogEntries();
+        
+        // Set active tab to security events
+        this.switchTab('events');
+      }
+      
+      createTimelineChart() {
+        const chartContainer = document.getElementById('timelineChart');
+        if (!chartContainer || !this.results) return;
+        
+        // Prepare data
+        const timeDistribution = this.results.trafficStats.timeDistribution;
+        const times = Object.keys(timeDistribution).sort();
+        const data = times.map(time => timeDistribution[time]);
+        
+        // Create chart
+        this.charts.timeline = echarts.init(chartContainer);
+        
+        // Prepare chart options
+        const option = {
+          tooltip: {
+            trigger: 'axis',
+            formatter: '{b}: {c} requests'
+          },
+          grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+          },
+          xAxis: {
+            type: 'category',
+            data: times.map(t => moment(t).format('MMM DD HH:00')),
+            axisLabel: {
+              formatter: '{value}',
+              rotate: 45,
+              interval: Math.max(1, Math.floor(times.length / 10))
+            }
+          },
+          yAxis: {
+            type: 'value'
+          },
+          series: [
+            {
+              name: 'Requests',
+              type: 'line',
+              smooth: true,
+              data: data,
+              areaStyle: {
+                color: {
+                  type: 'linear',
+                  x: 0,
+                  y: 0,
+                  x2: 0,
+                  y2: 1,
+                  colorStops: [
+                    { offset: 0, color: 'rgba(59, 130, 246, 0.7)' },
+                    { offset: 1, color: 'rgba(59, 130, 246, 0.1)' }
+                  ]
+                }
+              },
+              itemStyle: {
+                color: '#3b82f6'
+              }
+            }
+          ]
+        };
+        
+        // Apply options
+        this.charts.timeline.setOption(option);
+        
+        // Handle resize
+        window.addEventListener('resize', () => {
+          this.charts.timeline.resize();
+        });
+      }
+      
+      createIPChart() {
+        const chartContainer = document.getElementById('ipChart');
+        if (!chartContainer || !this.results) return;
+        
+        // Prepare data - get top IPs by request count
+        const ipActivity = this.results.ipActivity;
+        const ips = Object.keys(ipActivity)
+          .map(ip => ({ ip, requests: ipActivity[ip].requests }))
+          .sort((a, b) => b.requests - a.requests)
+          .slice(0, 10);
+        
+        // Create chart
+        this.charts.ip = echarts.init(chartContainer);
+        
+        // Prepare chart options
+        const option = {
+          tooltip: {
+            trigger: 'axis',
+            axisPointer: {
+              type: 'shadow'
+            },
+            formatter: '{b}: {c} requests'
+          },
+          grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+          },
+          xAxis: {
+            type: 'value'
+          },
+          yAxis: {
+            type: 'category',
+            data: ips.map(item => item.ip),
+            axisLabel: {
+              formatter: '{value}',
+              interval: 0
+            }
+          },
+          series: [
+            {
+              name: 'Requests',
+              type: 'bar',
+              data: ips.map(item => ({
+                value: item.requests,
+                itemStyle: {
+                  color: ipActivity[item.ip].potentialScanner ? '#ef4444' : '#3b82f6'
+                }
+              })),
+              label: {
+                show: true,
+                position: 'right',
+                formatter: '{c}'
+              }
+            }
+          ]
+        };
+        
+        // Apply options
+        this.charts.ip.setOption(option);
+        
+        // Handle resize
+        window.addEventListener('resize', () => {
+          this.charts.ip.resize();
+        });
+        
+        // Display suspicious IPs
+        const suspiciousIPsContainer = document.getElementById('suspiciousIPs');
+        if (suspiciousIPsContainer) {
+          // Find suspicious IPs
+          const suspiciousIPs = Object.keys(ipActivity)
+            .filter(ip => ipActivity[ip].potentialScanner)
+            .map(ip => ({ ip, ...ipActivity[ip] }))
+            .sort((a, b) => b.requests - a.requests);
+          
+          if (suspiciousIPs.length > 0) {
+            let html = '<div class="px-4 py-3 border-b border-gray-200 bg-gray-50 text-xs font-medium text-gray-500 uppercase tracking-wider">Suspicious IPs</div>';
+            
+            suspiciousIPs.forEach(ip => {
+              html += `
+                <div class="px-4 py-3 border-b border-gray-200 hover:bg-gray-50">
+                  <div class="flex justify-between">
+                    <span class="font-medium text-gray-900">${ip.ip}</span>
+                    <span class="text-red-600">${ip.requests} requests</span>
+                  </div>
+                  <div class="mt-1 text-xs text-gray-500">
+                    <span>First seen: ${moment(ip.firstSeen).format('MMM DD HH:mm:ss')}</span>
+                    <span class="ml-2">Last seen: ${moment(ip.lastSeen).format('MMM DD HH:mm:ss')}</span>
+                  </div>
+                  <div class="mt-1 text-xs text-gray-600">
+                    <span>Rate: ${ip.requestsPerMinute.toFixed(2)} req/min</span>
+                    <span class="ml-2">URLs: ${Object.keys(ip.urls).length}</span>
+                  </div>
+                </div>
+              `;
+            });
+            
+            suspiciousIPsContainer.innerHTML = html;
+          } else {
+            suspiciousIPsContainer.innerHTML = '<div class="p-4 text-center text-gray-500">No suspicious IP activity detected</div>';
+          }
+        }
+        
+        // Populate IP details table
+        this.displayIPDetails(Object.keys(ipActivity));
+      }
+      
+      createUserChart() {
+        const chartContainer = document.getElementById('userChart');
+        if (!chartContainer || !this.results) return;
+        
+        // Prepare data - get top users by request count
+        const userActivity = this.results.userActivity;
+        const users = Object.keys(userActivity)
+          .map(user => ({ user, requests: userActivity[user].requests }))
+          .sort((a, b) => b.requests - a.requests)
+          .slice(0, 10);
+        
+        // Create chart
+        this.charts.user = echarts.init(chartContainer);
+        
+        // Prepare chart options
+        const option = {
+          tooltip: {
+            trigger: 'axis',
+            axisPointer: {
+              type: 'shadow'
+            },
+            formatter: '{b}: {c} requests'
+          },
+          grid: {
+            left: '3%',
+            right: '4%',
+            bottom: '3%',
+            containLabel: true
+          },
+          xAxis: {
+            type: 'value'
+          },
+          yAxis: {
+            type: 'category',
+            data: users.map(item => item.user),
+            axisLabel: {
+              formatter: '{value}',
+              interval: 0
+            }
+          },
+          series: [
+            {
+              name: 'Requests',
+              type: 'bar',
+              data: users.map(item => ({
+                value: item.requests,
+                itemStyle: {
+                  color: userActivity[item.user].suspicious ? '#ef4444' : '#10b981'
+                }
+              })),
+              label: {
+                show: true,
+                position: 'right',
+                formatter: '{c}'
+              }
+            }
+          ]
+        };
+        
+        // Apply options
+        this.charts.user.setOption(option);
+        
+        // Handle resize
+        window.addEventListener('resize', () => {
+          this.charts.user.resize();
+        });
+        
+        // Display authentication events
+        const authEventsContainer = document.getElementById('authEvents');
+        if (authEventsContainer) {
+          // Find auth-related events
+          const authEvents = this.results.events
+            .filter(event => 
+              event.category === 'auth_failure' || 
+              event.category === 'auth_success' || 
+              event.category === 'brute_force' ||
+              event.category === 'anomalous_login'
+            )
+            .sort((a, b) => moment(b.timestamp).valueOf() - moment(a.timestamp).valueOf())
+            .slice(0, 20);
+          
+          if (authEvents.length > 0) {
+            let html = '<div class="px-4 py-3 border-b border-gray-200 bg-gray-50 text-xs font-medium text-gray-500 uppercase tracking-wider">Recent Authentication Events</div>';
+            
+            authEvents.forEach(event => {
+              const severityClass = 
+                event.severity === 'critical' ? 'text-red-600' :
+                event.severity === 'high' ? 'text-orange-600' :
+                event.severity === 'medium' ? 'text-yellow-600' :
+                'text-blue-600';
+                
+              html += `
+                <div class="px-4 py-3 border-b border-gray-200 hover:bg-gray-50">
+                  <div class="flex justify-between">
+                    <span class="font-medium text-gray-900">${event.user}</span>
+                    <span class="${severityClass}">${event.description}</span>
+                  </div>
+                  <div class="mt-1 text-xs text-gray-500">
+                    <span>${moment(event.timestamp).format('MMM DD HH:mm:ss')}</span>
+                    <span class="ml-2">IP: ${event.ip}</span>
+                  </div>
+                </div>
+              `;
+            });
+            
+            authEventsContainer.innerHTML = html;
+          } else {
+            authEventsContainer.innerHTML = '<div class="p-4 text-center text-gray-500">No authentication events found</div>';
+          }
+        }
+        
+        // Populate user details table
+        this.displayUserDetails(Object.keys(userActivity));
+      }
+      
+      createMethodChart() {
+        const chartContainer = document.getElementById('methodChart');
+        if (!chartContainer || !this.results) return;
+        
+        // Prepare data
+        const methods = this.results.trafficStats.methods;
+        const methodNames = Object.keys(methods);
+        const methodCounts = methodNames.map(method => methods[method]);
+        
+        // Create chart
+        this.charts.method = echarts.init(chartContainer);
+        
+        // Prepare chart options
+        const option = {
+          tooltip: {
+            trigger: 'item',
+            formatter: '{b}: {c} ({d}%)'
+          },
+          legend: {
+            orient: 'vertical',
+            right: 10,
+            top: 'center',
+            data: methodNames
+          },
+          series: [
+            {
+              name: 'Request Methods',
+              type: 'pie',
+              radius: ['50%', '70%'],
+              avoidLabelOverlap: false,
+              label: {
+                show: false,
+                position: 'center'
+              },
+              emphasis: {
+                label: {
+                  show: true,
+                  fontSize: '16',
+                  fontWeight: 'bold'
+                }
+              },
+              labelLine: {
+                show: false
+              },
+              data: methodNames.map((name, index) => ({
+                value: methodCounts[index],
+                name: name
+              }))
+            }
+          ]
+        };
+        
+        // Apply options
+        this.charts.method.setOption(option);
+        
+        // Handle resize
+        window.addEventListener('resize', () => {
+          this.charts.method.resize();
+        });
+      }
+      
+      createStatusChart() {
+        const chartContainer = document.getElementById('statusChart');
+        if (!chartContainer || !this.results) return;
+        
+        // Prepare data
+        const statusCodes = this.results.trafficStats.statusCodes;
+        
+        // Group status codes by category (2xx, 3xx, 4xx, 5xx)
+        const statusGroups = {
+          '2xx (Success)': 0,
+          '3xx (Redirection)': 0,
+          '4xx (Client Error)': 0,
+          '5xx (Server Error)': 0,
+          'Other': 0
+        };
+        
+        for (const [code, count] of Object.entries(statusCodes)) {
+          const codeNum = parseInt(code, 10);
+          if (codeNum >= 200 && codeNum < 300) {
+            statusGroups['2xx (Success)'] += count;
+          } else if (codeNum >= 300 && codeNum < 400) {
+            statusGroups['3xx (Redirection)'] += count;
+          } else if (codeNum >= 400 && codeNum < 500) {
+            statusGroups['4xx (Client Error)'] += count;
+          } else if (codeNum >= 500 && codeNum < 600) {
+            statusGroups['5xx (Server Error)'] += count;
+          } else {
+            statusGroups['Other'] += count;
+          }
+        }
+        
+        // Create data array for chart
+        const groupNames = Object.keys(statusGroups);
+        const groupData = groupNames.map(name => statusGroups[name]);
+        
+        // Create chart
+        this.charts.status = echarts.init(chartContainer);
+        
+        // Define colors for status groups
+        const colors = {
+          '2xx (Success)': '#10b981',
+          '3xx (Redirection)': '#3b82f6',
+          '4xx (Client Error)': '#f59e0b',
+          '5xx (Server Error)': '#ef4444',
+          'Other': '#6b7280'
+        };
+        
+        // Prepare chart options
+        const option = {
+          tooltip: {
+            trigger: 'item',
+            formatter: '{b}: {c} ({d}%)'
+          },
+          legend: {
+            orient: 'vertical',
+            right: 10,
+            top: 'center',
+            data: groupNames
+          },
+          series: [
+            {
+              name: 'Status Codes',
+              type: 'pie',
+              radius: ['50%', '70%'],
+              avoidLabelOverlap: false,
+              label: {
+                show: false,
+                position: 'center'
+              },
+              emphasis: {
+                label: {
+                  show: true,
+                  fontSize: '16',
+                  fontWeight: 'bold'
+                }
+              },
+              labelLine: {
+                show: false
+              },
+              data: groupNames.map((name, index) => ({
+                value: groupData[index],
+                name: name,
+                itemStyle: {
+                  color: colors[name]
+                }
+              }))
+            }
+          ]
+        };
+        
+        // Apply options
+        this.charts.status.setOption(option);
+        
+        // Handle resize
+        window.addEventListener('resize', () => {
+          this.charts.status.resize();
+        });
+        
+        // Display top resources
+        this.displayTopResources();
+      }
+      
+      displayEvents() {
+        const container = document.getElementById('eventsContent');
+        if (!container || !this.results) return;
+        
+        // Group events by category
+        const eventsByCategory = {};
+        
+        this.results.events.forEach(event => {
+          if (!eventsByCategory[event.category]) {
+            eventsByCategory[event.category] = [];
+          }
+          eventsByCategory[event.category].push(event);
+        });
+        
+        // Generate HTML
+        let html = '';
+        
+        for (const [category, events] of Object.entries(eventsByCategory)) {
+          html += `
+            <div class="event-category mb-6" data-category="${category}">
+              <h3 class="text-lg font-medium text-gray-900 mb-3">${this.formatCategoryName(category)}</h3>
+              <div class="space-y-3">
+          `;
+          
+          events.forEach(event => {
+            const severityClass = 
+              event.severity === 'critical' ? 'border-red-500 bg-red-50' :
+              event.severity === 'high' ? 'border-orange-500 bg-orange-50' :
+              event.severity === 'medium' ? 'border-yellow-500 bg-yellow-50' :
+              'border-blue-500 bg-blue-50';
+            
+            html += `
+              <div class="finding-card p-4 rounded-md shadow-sm ${severityClass}" data-severity="${event.severity}" data-timestamp="${event.timestamp}">
+                <div class="flex justify-between items-start">
+                  <h4 class="font-medium text-gray-900">${event.description}</h4>
+                  <span class="px-2 py-1 text-xs font-medium rounded-full uppercase ${
+                    event.severity === 'critical' ? 'bg-red-100 text-red-800' :
+                    event.severity === 'high' ? 'bg-orange-100 text-orange-800' :
+                    event.severity === 'medium' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-blue-100 text-blue-800'
+                  }">${event.severity}</span>
+                </div>
+                <div class="mt-1 text-sm text-gray-600">
+                  <span>Time: ${moment(event.timestamp).format('MMM DD, YYYY HH:mm:ss')}</span>
+                  <span class="ml-3">IP: ${event.ip}</span>
+                  ${event.user && event.user !== 'unknown' ? `<span class="ml-3">User: ${event.user}</span>` : ''}
+                </div>
+                <div class="mt-2 text-xs text-gray-500">
+                  <details>
+                    <summary class="cursor-pointer hover:text-gray-900">Details</summary>
+                    <div class="mt-2 p-2 bg-white rounded border border-gray-200">
+                      ${event.url ? `<p class="mb-1"><strong>URL:</strong> ${event.url}</p>` : ''}
+                      ${event.statusCode ? `<p class="mb-1"><strong>Status:</strong> ${event.statusCode}</p>` : ''}
+                      ${event.userAgent ? `<p class="mb-1"><strong>User Agent:</strong> ${event.userAgent}</p>` : ''}
+                      <p class="mb-1"><strong>Raw Log:</strong></p>
+                      <pre class="mt-1 p-2 bg-gray-50 rounded text-xs overflow-x-auto">${this.escapeHtml(event.rawLog || event.message)}</pre>
+                    </div>
+                  </details>
+                </div>
+              </div>
+            `;
+          });
+          
+          html += `</div></div>`;
+        }
+        
+        // Display or show empty state
+        if (html) {
+          container.innerHTML = html;
+        } else {
+          container.innerHTML = `
+            <div class="bg-green-50 p-4 rounded-md text-center">
+              <p class="text-green-800">No security events found in the log.</p>
+            </div>
+          `;
+        }
+      }
+      
+      displayIPAnalysis() {
+        // IP details are displayed separately
+      }
+      
+      displayIPDetails(ips) {
+        const container = document.getElementById('ipDetails');
+        if (!container || !this.results) return;
+        
+        if (!ips || ips.length === 0) {
+          container.innerHTML = '<p class="text-gray-600 italic">No IP address data available.</p>';
+          return;
+        }
+        
+        // Sort IPs by request count
+        const sortedIPs = ips
+          .map(ip => ({ ip, requests: this.results.ipActivity[ip].requests }))
+          .sort((a, b) => b.requests - a.requests);
+        
+        // Generate table
+        let html = `
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead>
+              <tr>
+                <th scope="col" class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">IP Address</th>
+                <th scope="col" class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requests</th>
+                <th scope="col" class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rate</th>
+                <th scope="col" class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">First Seen</th>
+                <th scope="col" class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Seen</th>
+                <th scope="col" class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Risk</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+        `;
+        
+        sortedIPs.forEach(({ ip }) => {
+          const ipData = this.results.ipActivity[ip];
+          
+          // Determine risk level
+          let riskLevel = 'Low';
+          let riskClass = 'text-green-600';
+          
+          if (ipData.potentialScanner) {
+            riskLevel = 'High';
+            riskClass = 'text-red-600 font-medium';
+          } else if (ipData.requestsPerMinute > 10) {
+            riskLevel = 'Medium';
+            riskClass = 'text-yellow-600';
+          }
+          
+          html += `
+            <tr class="ip-row hover:bg-gray-50" data-ip="${ip}">
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${ip}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${ipData.requests}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${ipData.requestsPerMinute.toFixed(2)} req/min</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${moment(ipData.firstSeen).format('MMM DD HH:mm:ss')}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${moment(ipData.lastSeen).format('MMM DD HH:mm:ss')}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm ${riskClass}">${riskLevel}</td>
+            </tr>
+          `;
+        });
+        
+        html += '</tbody></table>';
+        container.innerHTML = html;
+      }
+      
+      displayUserActivity() {
+        // User details are displayed separately
+      }
+      
+      displayUserDetails(users) {
+        const container = document.getElementById('userDetails');
+        if (!container || !this.results) return;
+        
+        if (!users || users.length === 0) {
+          container.innerHTML = '<p class="text-gray-600 italic">No user activity data available.</p>';
+          return;
+        }
+        
+        // Sort users by request count
+        const sortedUsers = users
+          .map(user => ({ user, requests: this.results.userActivity[user].requests }))
+          .sort((a, b) => b.requests - a.requests);
+        
+        // Generate table
+        let html = `
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead>
+              <tr>
+                <th scope="col" class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
+                <th scope="col" class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requests</th>
+                <th scope="col" class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unique IPs</th>
+                <th scope="col" class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">First Seen</th>
+                <th scope="col" class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Last Seen</th>
+                <th scope="col" class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Auth Success/Fail</th>
+                <th scope="col" class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Risk</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+        `;
+        
+        sortedUsers.forEach(({ user }) => {
+          const userData = this.results.userActivity[user];
+          
+          // Determine risk level
+          let riskLevel = 'Low';
+          let riskClass = 'text-green-600';
+          
+          if (userData.suspicious) {
+            riskLevel = 'High';
+            riskClass = 'text-red-600 font-medium';
+          } else if (userData.authFailure > 0) {
+            riskLevel = 'Medium';
+            riskClass = 'text-yellow-600';
+          }
+          
+          html += `
+            <tr class="user-row hover:bg-gray-50" data-user="${user}">
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${user}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${userData.requests}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${userData.ips.length}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${moment(userData.firstSeen).format('MMM DD HH:mm:ss')}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${moment(userData.lastSeen).format('MMM DD HH:mm:ss')}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${userData.authSuccess}/${userData.authFailure}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm ${riskClass}">${riskLevel}</td>
+            </tr>
+          `;
+        });
+        
+        html += '</tbody></table>';
+        container.innerHTML = html;
+      }
+      
+      displayTrafficPatterns() {
+        // Charts are created separately, just need to display top resources
+      }
+      
+      displayTopResources() {
+        const container = document.getElementById('topResources');
+        if (!container || !this.results) return;
+        
+        const resources = this.results.trafficStats.requestedResources;
+        if (!resources || Object.keys(resources).length === 0) {
+          container.innerHTML = '<p class="text-gray-600 italic">No resource data available.</p>';
+          return;
+        }
+        
+        // Sort resources by request count
+        const sortedResources = Object.entries(resources)
+          .map(([url, count]) => ({ url, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 20);
+        
+        // Generate table
+        let html = `
+          <table class="min-w-full divide-y divide-gray-200">
+            <thead>
+              <tr>
+                <th scope="col" class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Resource Path</th>
+                <th scope="col" class="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Requests</th>
+              </tr>
+            </thead>
+            <tbody class="bg-white divide-y divide-gray-200">
+        `;
+        
+        sortedResources.forEach(({ url, count }) => {
+          html += `
+            <tr class="hover:bg-gray-50">
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${url}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${count}</td>
+            </tr>
+          `;
+        });
+        
+        html += '</tbody></table>';
+        container.innerHTML = html;
+      }
+      
+      displayLogEntries() {
+        const container = document.getElementById('logEntries');
+        if (!container || !this.results) return;
+        
+        // Generate HTML for log entries
+        const entries = this.results.parsedEntries.slice(0, 5000); // Limit to prevent browser slowdown
+        
+        if (entries.length === 0) {
+          container.innerHTML = '<p class="text-gray-600 italic">No log entries available.</p>';
+          return;
+        }
+        
+        let html = '';
+        
+        entries.forEach((entry, index) => {
+          // Determine log level based on status code or presence in events
+          let levelClass = 'text-gray-700';
+          let level = 'info';
+          
+          if (entry.statusCode) {
+            if (entry.statusCode >= 500) {
+              levelClass = 'text-red-600';
+              level = 'error';
+            } else if (entry.statusCode >= 400) {
+              levelClass = 'text-yellow-600';
+              level = 'warning';
+            }
+          }
+          
+          // Check if this entry is related to any events
+          const isInEvents = this.results.events.some(event => 
+            event.rawLog === entry.raw || 
+            event.message === entry.message
+          );
+          
+          if (isInEvents) {
+            levelClass = 'text-red-600 font-medium';
+            level = 'event';
+          }
+          
+          html += `
+            <div class="log-entry py-1 border-b border-gray-100 ${levelClass}" data-level="${level}">
+              <span class="text-gray-400">[${index + 1}]</span>
+              <span class="ml-2">${moment(entry.timestamp).format('YYYY-MM-DD HH:mm:ss')}</span>
+              ${entry.ip ? `<span class="ml-2">${entry.ip}</span>` : ''}
+              ${entry.method ? `<span class="ml-2">${entry.method}</span>` : ''}
+              ${entry.statusCode ? `<span class="ml-2">${entry.statusCode}</span>` : ''}
+              <span class="ml-2">${this.escapeHtml(entry.message || entry.raw)}</span>
+            </div>
+          `;
+        });
+        
+        container.innerHTML = html;
+      }
+      
+      filterEvents(severity) {
+        // Update active filter button
+        document.querySelectorAll('.severity-filter').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.severity === severity);
+        });
+        
+        // Filter findings
+        const findings = document.querySelectorAll('.finding-card');
+        findings.forEach(finding => {
+          if (severity === 'all' || finding.dataset.severity === severity) {
+            finding.classList.remove('hidden');
+          } else {
+            finding.classList.add('hidden');
+          }
+        });
+        
+        // Check if categories are empty and hide them
+        document.querySelectorAll('.event-category').forEach(category => {
+          const visibleFindings = category.querySelectorAll('.finding-card:not(.hidden)');
+          category.classList.toggle('hidden', visibleFindings.length === 0);
+        });
+      }
+      
+      searchEvents(query) {
+        if (!query || query.length === 0) {
+          // Show all events
+          this.filterEvents(document.querySelector('.severity-filter.active').dataset.severity);
+          return;
+        }
+        
+        query = query.toLowerCase();
+        
+        // Filter events based on search
+        const findings = document.querySelectorAll('.finding-card');
+        findings.forEach(finding => {
+          const text = finding.textContent.toLowerCase();
+          if (text.includes(query)) {
+            finding.classList.remove('hidden');
+          } else {
+            finding.classList.add('hidden');
+          }
+        });
+        
+        // Check if categories are empty and hide them
+        document.querySelectorAll('.event-category').forEach(category => {
+          const visibleFindings = category.querySelectorAll('.finding-card:not(.hidden)');
+          category.classList.toggle('hidden', visibleFindings.length === 0);
+        });
+      }
+      
+      searchIPs(query) {
+        if (!query || query.length === 0) {
+          // Show all IPs
+          this.displayIPDetails(Object.keys(this.results.ipActivity));
+          return;
+        }
+        
+        query = query.toLowerCase();
+        
+        // Filter IPs based on search
+        const filteredIPs = Object.keys(this.results.ipActivity).filter(ip => 
+          ip.toLowerCase().includes(query)
+        );
+        
+        this.displayIPDetails(filteredIPs);
+      }
+      
+      searchUsers(query) {
+        if (!query || query.length === 0) {
+          // Show all users
+          this.displayUserDetails(Object.keys(this.results.userActivity));
+          return;
+        }
+        
+        query = query.toLowerCase();
+        
+        // Filter users based on search
+        const filteredUsers = Object.keys(this.results.userActivity).filter(user => 
+          user.toLowerCase().includes(query)
+        );
+        
+        this.displayUserDetails(filteredUsers);
+      }
+      
+      searchLogs(query) {
+        if (!query || query.length === 0) {
+          // Show all logs
+          this.filterLogs(document.getElementById('logFilter').value);
+          return;
+        }
+        
+        query = query.toLowerCase();
+        
+        // Filter logs based on search
+        const logEntries = document.querySelectorAll('.log-entry');
+        logEntries.forEach(entry => {
+          const text = entry.textContent.toLowerCase();
+          if (text.includes(query)) {
+            entry.classList.remove('hidden');
+          } else {
+            entry.classList.add('hidden');
+          }
+        });
+      }
+      
+      filterLogs(level) {
+        if (level === 'all') {
+          // Show all logs
+          document.querySelectorAll('.log-entry').forEach(entry => {
+            entry.classList.remove('hidden');
+          });
+          return;
+        }
+        
+        // Filter logs based on level
+        document.querySelectorAll('.log-entry').forEach(entry => {
+          if (level === 'error' && entry.dataset.level === 'error') {
+            entry.classList.remove('hidden');
+          } else if (level === 'warning' && (entry.dataset.level === 'warning' || entry.dataset.level === 'error')) {
+            entry.classList.remove('hidden');
+          } else if (level === 'info' && entry.dataset.level === 'info') {
+            entry.classList.remove('hidden');
+          } else {
+            entry.classList.add('hidden');
+          }
+        });
+      }
+      
+      switchTab(tabId) {
+        // Update active tab button
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+          btn.classList.toggle('active', btn.dataset.tab === tabId);
+        });
+        
+        // Show selected tab content
+        document.querySelectorAll('.tab-content').forEach(content => {
+          content.classList.toggle('hidden', content.id !== `${tabId}Tab`);
+        });
+        
+        // Resize charts if switching to a tab with charts
+        if (tabId === 'ips' && this.charts.ip) {
+          this.charts.ip.resize();
+        } else if (tabId === 'users' && this.charts.user) {
+          this.charts.user.resize();
+        } else if (tabId === 'traffic') {
+          if (this.charts.method) this.charts.method.resize();
+          if (this.charts.status) this.charts.status.resize();
+        }
+      }
+      
+      downloadJSONReport() {
+        if (!this.results) {
+          this.showNotification('No analysis results to export', 'warning');
+          return;
+        }
+        
+        try {
+          // Create report object
+          const report = {
+            scanDate: new Date().toISOString(),
+            scanner: 'LogSentinel Advanced Log Analysis Tool',
+            file: {
+              name: this.file.name,
+              size: this.file.size
+            },
+            summary: this.results.stats,
+            events: this.results.events,
+            format: this.results.detectedFormat
+          };
+          
+          // Convert to JSON
+          const jsonString = JSON.stringify(report, null, 2);
+          
+          // Create blob and download
+          const blob = new Blob([jsonString], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `log-analysis-report-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.json`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          
+          this.showNotification('Report downloaded successfully', 'success');
+        } catch (error) {
+          console.error('Error generating JSON report:', error);
+          this.showNotification('Failed to generate report', 'error');
+        }
+      }
+      
+      downloadCSVReport() {
+        if (!this.results) {
+          this.showNotification('No analysis results to export', 'warning');
+          return;
+        }
+        
+        try {
+          // Create CSV from events
+          const events = this.results.events;
+          
+          // CSV header
+          const headers = ['Timestamp', 'Severity', 'Category', 'Description', 'IP', 'User', 'URL', 'Status Code', 'Message'];
+          
+          // Create rows
+          const rows = events.map(event => [
+            event.timestamp,
+            event.severity,
+            event.category,
+            event.description,
+            event.ip,
+            event.user,
+            event.url || '',
+            event.statusCode || '',
+            event.message || ''
+          ]);
+          
+          // Insert header row
+          rows.unshift(headers);
+          
+          // Generate CSV
+          const csvContent = rows.map(row => 
+            row.map(cell => 
+              typeof cell === 'string' ? `"${cell.replace(/"/g, '""')}"` : (cell || '')
+            ).join(',')
+          ).join('\n');
+          
+          // Create blob and download
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `log-events-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.csv`;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          
+          this.showNotification('CSV report downloaded successfully', 'success');
+        } catch (error) {
+          console.error('Error generating CSV report:', error);
+          this.showNotification('Failed to generate CSV report', 'error');
+        }
+      }
+      
+      showHelp() {
+        this.showNotification(`
+          LogSentinel analyzes log files to identify security events and suspicious activity.
+          Upload a log file and click "Start Analysis" to begin.
+          Results are displayed across multiple tabs for detailed investigation.
+        `, 'info', 10000);
+      }
+      
+      showNotification(message, type = 'info', duration = 4000) {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = 'notification';
+        
+        // Set appearance based on type
+        switch(type) {
+          case 'success':
+            notification.style.backgroundColor = '#d1fae5';
+            notification.style.color = '#065f46';
+            notification.style.borderLeft = '4px solid #10b981';
+            break;
+          case 'warning':
+            notification.style.backgroundColor = '#fef3c7';
+            notification.style.color = '#92400e';
+            notification.style.borderLeft = '4px solid #f59e0b';
+            break;
+          case 'error':
+            notification.style.backgroundColor = '#fee2e2';
+            notification.style.color = '#b91c1c';
+            notification.style.borderLeft = '4px solid #ef4444';
+            break;
+          default: // info
+            notification.style.backgroundColor = '#dbeafe';
+            notification.style.color = '#1e40af';
+            notification.style.borderLeft = '4px solid #3b82f6';
+        }
+        
+        // Add message
+        notification.textContent = message;
+        
+        // Add to document
+        document.body.appendChild(notification);
+        
+        // Remove after specified duration
+        setTimeout(() => {
+          document.body.removeChild(notification);
+        }, duration);
+      }
+      
+      formatBytes(bytes, decimals = 2) {
+        if (bytes === 0) return '0 Bytes';
+        
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+        
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+      }
+      
+      formatCategoryName(category) {
+        return category
+          .replace(/_/g, ' ')
+          .replace(/(?:^|\s)\S/g, match => match.toUpperCase());
+      }
+      
+      escapeHtml(unsafe) {
+        return unsafe
+          .toString()
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+    }
+    
+    // Initialize UI Controller when DOM is ready
+    document.addEventListener('DOMContentLoaded', () => {
+      new UIController();
+    });
+  </script>
+</body>
+</html>
